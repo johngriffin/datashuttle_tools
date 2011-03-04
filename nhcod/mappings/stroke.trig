@@ -73,9 +73,3 @@
 	scv:dimension [ xl:uri "MAKEURI(AL19)"^^xl:Expr ; owl:sameAs "DBP_YEAR(AL19)"^^xl:Expr ; a ex:Year ; rdfs:label "AL19"^^xl:Expr ] ;
 	rdf:value    "AL129"^^xl:Expr .
 }
-
-
-## TODO
-# skipcondition
-# get file from remote
-# add alternative label for pco
