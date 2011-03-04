@@ -1,0 +1,81 @@
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix ex:		<http://example.org/> .
+@prefix dc:     <http://purl.org/dc/elements/1.1/> .
+@prefix xl:		<http://purl.org/NET/xlwrap#> .
+@prefix scv:	<http://purl.org/NET/scovo#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix ohio:   <http://data.dh.gov.uk/ontology/ohio/> .
+@prefix ref:    <http://reference.data.gov.uk/id/> .
+@prefix pct:    <http://purl.oclc.org/argot/health/2009/09/primary-care-trust/> .
+
+@prefix :       <http://atchai.com/> .
+
+
+{ [] a xl:Mapping ;
+	xl:offline "false"^^xsd:boolean ;
+
+	xl:template [
+# lung_cancer data: 1993 -2008 Indirectly standardised ratio (SMR)
+		xl:fileName "http://www.nchod.nhs.uk/NCHOD%5Ccompendium.nsf/($All)/61CE8955C198B2D7802577FB002D6EE1/$File/14B_105SMT0074_08_V1_D.xls?OpenElement" ;
+		xl:sheetNumber "0" ;
+		xl:constantGraph :SCOVODataset ;
+		xl:templateGraph :SCOVOlung_cancer ;
+		xl:transform [
+			a rdf:Seq ;
+			rdf:_1 [
+				a xl:ColShift ;
+# Specify range as following: FIRST CELL; SECOND CELL: LAST CELL
+				xl:restriction "AL19; AL128:AL129 " ;
+				xl:breakCondition "ALLEMPTY(AL19)";
+				xl:steps "1" ;
+			] ;
+			rdf:_2 [
+				a xl:RowShift ;
+				xl:restriction "A128; B128:AL129 " ;
+				xl:breakCondition "ALLEMPTY(A128)" ;
+				xl:steps "3" ;
+			] ;
+		]
+	] .
+}
+
+
+
+:SCOVODataset {
+	<> owl:import scv: .
+	
+	[ xl:uri "MAKEURI('lung_cancer')"^^xl:Expr ] a scv:Dataset ;
+	dc:title    "A5"^^xl:Expr ;
+	dc:creator  "Atchai" ;
+	dc:date     "NOW()"^^xl:Expr .
+
+	ex:SMR  a scv:Item .
+	ex:OBS  a scv:Item .
+	ex:LAD     [ rdfs:label "LAD" ; rdfs:subClassOf scv:Dimension; owl:sameAs "MAKEURI('http://statistics.data.gov.uk/def/administrative-geography/LocalAuthorityDistrict')" ] .
+	ex:Year    [ rdfs:label "Year" ; rdfs:subClassOf scv:Dimension ] .
+}
+
+
+
+:SCOVOlung_cancer {
+	[ xl:uri "MAKEURI(C128 & '_lung_cancer_' & A128 & '_' & AL19)"^^xl:Expr ] a ex:SMR ;
+	scv:dataset [ xl:uri "MAKEURI(AL128)"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "MAKEURI(A128)"^^xl:Expr ; owl:sameAs "'http://statistics.data.gov.uk/doc/local-authority-district/' & A128 & '.rdf'"^^xl:Expr; a ex:LAD ; rdfs:label "MAKEURI(A128)"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "MAKEURI(AL19)"^^xl:Expr ; owl:sameAs "DBP_YEAR(AL19)"^^xl:Expr ; a ex:Year ; rdfs:label "AL19"^^xl:Expr ] ;
+	rdf:value    "AL128"^^xl:Expr .
+
+	[ xl:uri "MAKEURI(C129  & '_lung_cancer_' & A128 & '_' & AL19)"^^xl:Expr ] a ex:OBS ;
+	scv:dataset [ xl:uri "MAKEURI(AL129)"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "MAKEURI(A128)"^^xl:Expr ; owl:sameAs "'http://statistics.data.gov.uk/doc/local-authority-district/' & A128 & '.rdf'"^^xl:Expr; a ex:LAD ; rdfs:label "MAKEURI(A128)"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "MAKEURI(AL19)"^^xl:Expr ; owl:sameAs "DBP_YEAR(AL19)"^^xl:Expr ; a ex:Year ; rdfs:label "AL19"^^xl:Expr ] ;
+	rdf:value    "AL129"^^xl:Expr .
+}
+
+
+## TODO
+# skipcondition
+# get file from remote
+# add alternative label for pco
