@@ -74,8 +74,3 @@
 	rdf:value    "AL129"^^xl:Expr .
 }
 
-
-## TODO
-# skipcondition
-# get file from remote
-# add alternative label for pco
