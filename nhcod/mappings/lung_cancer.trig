@@ -2,9 +2,9 @@
 @prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
 @prefix owl:    <http://www.w3.org/2002/07/owl#> .
-@prefix ex:		<http://example.org/> .
+@prefix ex:	<http://localhost/dataShuttle/> .
 @prefix dc:     <http://purl.org/dc/elements/1.1/> .
-@prefix xl:		<http://purl.org/NET/xlwrap#> .
+@prefix xl:	<http://purl.org/NET/xlwrap#> .
 @prefix scv:	<http://purl.org/NET/scovo#> .
 @prefix dct:    <http://purl.org/dc/terms/> .
 @prefix ohio:   <http://data.dh.gov.uk/ontology/ohio/> .
@@ -47,30 +47,31 @@
 :SCOVODataset {
 	<> owl:import scv: .
 	
-	[ xl:uri "MAKEURI('lung_cancer')"^^xl:Expr ] a scv:Dataset ;
+	[ xl:uri "http://localhost/dataShuttle/lung_cancer" ] a scv:Dataset ;
 	dc:title    "A5"^^xl:Expr ;
 	dc:creator  "Atchai" ;
+	dc:subject  "mortality";
 	dc:date     "NOW()"^^xl:Expr .
 
 	ex:SMR  a scv:Item .
 	ex:OBS  a scv:Item .
-	ex:LAD     [ rdfs:label "LAD" ; rdfs:subClassOf scv:Dimension; owl:sameAs "MAKEURI('http://statistics.data.gov.uk/def/administrative-geography/LocalAuthorityDistrict')" ] .
+	ex:LAD     [ rdfs:label "LAD" ; rdfs:subClassOf scv:Dimension; owl:sameAs "'http://statistics.data.gov.uk/def/administrative-geography/LocalAuthorityDistrict'" ] .
 	ex:Year    [ rdfs:label "Year" ; rdfs:subClassOf scv:Dimension ] .
 }
 
 
 
 :SCOVOlung_cancer {
-	[ xl:uri "MAKEURI(C128 & '_lung_cancer_' & A128 & '_' & AL19)"^^xl:Expr ] a ex:SMR ;
-	scv:dataset [ xl:uri "MAKEURI(AL128)"^^xl:Expr ] ;
-	scv:dimension [ xl:uri "MAKEURI(A128)"^^xl:Expr ; owl:sameAs "'http://statistics.data.gov.uk/doc/local-authority-district/' & A128 & '.rdf'"^^xl:Expr; a ex:LAD ; rdfs:label "MAKEURI(A128)"^^xl:Expr ] ;
-	scv:dimension [ xl:uri "MAKEURI(AL19)"^^xl:Expr ; owl:sameAs "DBP_YEAR(AL19)"^^xl:Expr ; a ex:Year ; rdfs:label "AL19"^^xl:Expr ] ;
+	[ xl:uri "'http://localhost/dataShuttle/lung_cancer/' & C128 & '/' & A128 & '/' & AL19"^^xl:Expr ] a ex:SMR ;
+	scv:dataset [ xl:uri "http://localhost/dataShuttle/lung_cancer" ] ;
+	scv:dimension [ xl:uri "'http://localhost/dataShuttle/LAD/' & A128"^^xl:Expr ; owl:sameAs "'http://exstatistics.data.gov.uk/doc/local-authority-district/' & A128 & '.rdf'"^^xl:Expr; a ex:LAD ; rdfs:label "A128"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://localhost/dataShuttle/year/' & AL19"^^xl:Expr ; owl:sameAs "DBP_YEAR(AL19)"^^xl:Expr ; a ex:Year ; rdfs:label "AL19"^^xl:Expr ] ;
 	rdf:value    "AL128"^^xl:Expr .
 
-	[ xl:uri "MAKEURI(C129  & '_lung_cancer_' & A128 & '_' & AL19)"^^xl:Expr ] a ex:OBS ;
-	scv:dataset [ xl:uri "MAKEURI(AL129)"^^xl:Expr ] ;
-	scv:dimension [ xl:uri "MAKEURI(A128)"^^xl:Expr ; owl:sameAs "'http://statistics.data.gov.uk/doc/local-authority-district/' & A128 & '.rdf'"^^xl:Expr; a ex:LAD ; rdfs:label "MAKEURI(A128)"^^xl:Expr ] ;
-	scv:dimension [ xl:uri "MAKEURI(AL19)"^^xl:Expr ; owl:sameAs "DBP_YEAR(AL19)"^^xl:Expr ; a ex:Year ; rdfs:label "AL19"^^xl:Expr ] ;
+	[ xl:uri "'http://localhost/dataShuttle/lung_cancer/' & C129  & '/' & A128 & '/' & AL19"^^xl:Expr ] a ex:OBS ;
+	scv:dataset [ xl:uri "http://localhost/dataShuttle/lung_cancer" ] ;
+	scv:dimension [ xl:uri "'http://localhost/dataShuttle/LAD/' & A128"^^xl:Expr ; owl:sameAs "'http://statistics.data.gov.uk/doc/local-authority-district/' & A128 & '.rdf'"^^xl:Expr; a ex:LAD ; rdfs:label "A128"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://localhost/dataShuttle/year/' & AL19"^^xl:Expr ; owl:sameAs "DBP_YEAR(AL19)"^^xl:Expr ; a ex:Year ; rdfs:label "AL19"^^xl:Expr ] ;
 	rdf:value    "AL129"^^xl:Expr .
 }
 
