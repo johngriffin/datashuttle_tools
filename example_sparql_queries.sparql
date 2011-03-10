@@ -75,7 +75,7 @@ WHERE {
 ORDER BY DESC(?stat)
 LIMIT 20
 
-# Get all areacodes begining with H
+# Get all areacodes beginning with H
 SELECT DISTINCT ?areacode
 WHERE {
         ?s ?p <http://example.org/dataShuttle/LAD> .
