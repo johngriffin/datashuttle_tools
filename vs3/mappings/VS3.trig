@@ -1,0 +1,76 @@
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix ex:	<http://example.org/dataShuttle/> .
+@prefix dc:     <http://purl.org/dc/elements/1.1/> .
+@prefix xl:	<http://purl.org/NET/xlwrap#> .
+@prefix scv:	<http://purl.org/NET/scovo#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix ohio:   <http://data.dh.gov.uk/ontology/ohio/> .
+@prefix ref:    <http://reference.data.gov.uk/id/> .
+@prefix pct:    <http://purl.oclc.org/argot/health/2009/09/primary-care-trust/> .
+@prefix :       <http://atchai.com/> .
+
+{ [] a xl:Mapping ;
+	xl:offline "true"^^xsd:boolean ;
+
+	xl:template [
+		xl:fileName "/home/daniel/workspace/data/vs3-2009.xls" ;
+		xl:sheetNumber "0" ;
+		xl:constantGraph :SCOVODataset ;
+		xl:templateGraph :SCOVOvs3 ;
+		xl:transform [
+			a rdf:Seq ;
+			rdf:_1 [
+				a xl:ColShift ;
+				xl:restriction "F7; F18:F19"^^xl:Expr ;
+				xl:breakCondition "ALLEMPTY(F7)";
+				xl:steps "1" ;
+			] ;
+			rdf:_2 [
+				a xl:RowShift ;
+				xl:restriction "B18; F18:Y19"^^xl:Expr ;
+				xl:breakCondition "ALLEMPTY(B18:B19)" ;
+				xl:steps "2" ;
+			] ;
+		]
+	] .
+}
+
+
+
+:SCOVODataset {
+	<> owl:import scv: .
+	
+	[ xl:uri "'http://example.org/dataShuttle/vs3-2009'"^^xl:Expr ] a scv:Dataset ;
+	dc:title    "TRIM(A2)"^^xl:Expr ;
+	dc:creator  "Atchai" ;
+	dc:subject  "mortality";
+	dc:date     "NOW()"^^xl:Expr .
+
+	ex:male  a scv:Item .
+	ex:female  a scv:Item .
+	ex:LAD     [ rdfs:label "LAD" ; rdfs:subClassOf scv:Dimension; owl:sameAs "'http://statistics.data.gov.uk/def/administrative-geography/LocalAuthorityDistrict'" ] .
+	ex:Year    [ rdfs:label "Year" ; rdfs:subClassOf scv:Dimension ] .
+}
+
+
+
+:SCOVOvs3 {
+	[ xl:uri "'http://example.org/dataShuttle/vs3-2009/' & URLENCODE(TRIM(B18)) & '/' & URLENCODE(TRIM(A18)) & '/' & '2009' & '/'  & URLENCODE(TRIM(F7)) & '/male'"^^xl:Expr ] a ex:male ;
+	scv:dataset [ xl:uri "'http://example.org/dataShuttle/vs3-2009'"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://example.org/dataShuttle/LAD/' & URLENCODE(TRIM(A18))"^^xl:Expr ; owl:sameAs "'http://exstatistics.data.gov.uk/doc/local-authority-district/' & URLENCODE(TRIM(A18)) & '.rdf'"^^xl:Expr; a ex:LAD ; rdfs:label "TRIM(A18)"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://example.org/dataShuttle/year/2009'"^^xl:Expr ; owl:sameAs "DBP_YEAR('2009')"^^xl:Expr ; a ex:Year ; rdfs:label "'2009'"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://example.org/dataShuttle/age/' & URLENCODE(TRIM(F7))"^^xl:Expr ] ;
+	rdf:value    "TRIM(F18)"^^xl:Expr .
+
+	[ xl:uri "'http://example.org/dataShuttle/vs3-2009/' & URLENCODE(TRIM(B18)) & '/' & URLENCODE(TRIM(A18)) & '/' & '2009' & '/'  & URLENCODE(TRIM(F7)) & '/female'"^^xl:Expr ] a ex:female ;
+	scv:dataset [ xl:uri "'http://example.org/dataShuttle/vs3-2009'"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://example.org/dataShuttle/LAD/' & URLENCODE(TRIM(A18))"^^xl:Expr ; owl:sameAs "'http://exstatistics.data.gov.uk/doc/local-authority-district/' & URLENCODE(TRIM(A18)) & '.rdf'"^^xl:Expr; a ex:LAD ; rdfs:label "TRIM(A18)"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://example.org/dataShuttle/year/2009'"^^xl:Expr ; owl:sameAs "DBP_YEAR('2009')"^^xl:Expr ; a ex:Year ; rdfs:label "'2009'"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://example.org/dataShuttle/age/' & URLENCODE(TRIM(F7))"^^xl:Expr ] ;
+	rdf:value    "TRIM(F19)"^^xl:Expr .
+
+}
+
