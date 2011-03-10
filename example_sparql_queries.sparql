@@ -67,7 +67,7 @@ WHERE {
 }
 
 # Get all URIs for stats over 100 - limit 20, descending order
-SELECT DISTINCT ?uri, ?stat
+SELECT DISTINCT ?uri ?stat
 WHERE {
         ?uri <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> ?stat .
         FILTER (?stat >= 100)
