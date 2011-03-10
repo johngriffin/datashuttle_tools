@@ -26,7 +26,7 @@
 				a xl:RowShift ;
 				xl:restriction "A11:Y11"^^xl:Expr ;
 				xl:repeat "5000";
-				#xl:skipCondition "(A11 == '') || (LEFT(A11, 1) != 'H')" ;
+				xl:skipCondition "(LEFT(TRIM(A11), 1) != 'H')" ;
 				#xl:skipCondition "(A11 == '')" ;
 				#xl:skipCondition "(LEFT(A11, 1) != 'H')" ;
 				xl:steps "1" ;
