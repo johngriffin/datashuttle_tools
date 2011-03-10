@@ -74,3 +74,12 @@ WHERE {
 }
 ORDER BY DESC(?stat)
 LIMIT 20
+
+# Get all areacodes begining with H
+SELECT DISTINCT ?areacode
+WHERE {
+        ?s ?p <http://example.org/dataShuttle/LAD> .
+        ?s rdfs:label ?areacode .
+        FILTER(regex(?areacode, "^H"))
+}
+ORDER BY ?areacode
