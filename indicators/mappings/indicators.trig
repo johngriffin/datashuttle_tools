@@ -1,0 +1,41 @@
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix ex:	<http://example.org/dataShuttle/> .
+@prefix dc:     <http://purl.org/dc/elements/1.1/> .
+@prefix xl:	<http://purl.org/NET/xlwrap#> .
+@prefix scv:	<http://purl.org/NET/scovo#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix ohio:   <http://data.dh.gov.uk/ontology/ohio/> .
+@prefix ref:    <http://reference.data.gov.uk/id/> .
+@prefix pct:    <http://purl.oclc.org/argot/health/2009/09/primary-care-trust/> .
+@prefix ds:       <http://datashuttle.org/> .
+@prefix :       <http://datashuttle.org/> .
+
+{ [] a xl:Mapping ;
+	xl:offline "false"^^xsd:boolean ;
+  xl:template [
+		xl:fileName "/Users/jg2950/dev/datashuttle_tools/indicators/mappings/files/indicators_clean.csv" ;
+		xl:sheetNumber "0" ;
+		xl:templateGraph :Indicator ;
+		xl:transform [
+			a rdf:Seq ;
+			rdf:_1 [
+				a xl:RowShift ;
+				xl:restriction "A4:B4"^^xl:Expr ;
+				xl:steps "1" ;
+			] ;
+		]
+	] .
+}
+
+
+:Indicator {
+  
+  [ xl:uri "'http://datashuttle.org/indicator/mortality/' & URLENCODE(TRIM(A4)) & '/lad'"^^xl:Expr ] a ds:Indicator ;
+    ds:icdRange [ xl:uri "'http://example.org/dataShuttle/icd10/range/' & URLENCODE(TRIM(A4))"^^xl:Expr; rdfs:subClassOf <http://example.org/dataShuttle/icd10/range> ; rdfs:label "TRIM(A4)"^^xl:Expr ] ;
+    dc:title "TRIM(B4) & 'mortality'"^^xl:Expr ;
+    dc:subject "mortality" .
+}
+
