@@ -8,15 +8,14 @@
 @prefix scv:	<http://purl.org/NET/scovo#> .
 @prefix dct:    <http://purl.org/dc/terms/> .
 @prefix ohio:   <http://data.dh.gov.uk/ontology/ohio/> .
-@prefix ref:    <http://reference.data.gov.uk/id/> .
-@prefix pct:    <http://purl.oclc.org/argot/health/2009/09/primary-care-trust/> .
-@prefix :       <http://atchai.com/> .
+@prefix sdmx-code:       <http://purl.org/linked-data/sdmx/2009/code#> .
+@prefix :       <http://datashuttle.org/> .
 
 { [] a xl:Mapping ;
 	xl:offline "false"^^xsd:boolean ;
   xl:template [
-		xl:fileName "/Users/jg2950/dev/datashuttle_tools/vs3/mappings/files/2008/ar08_vs3_E.csv,
-		             /Users/jg2950/dev/datashuttle_tools/vs3/mappings/files/2008/ar08_vs3_EM.csv" ;
+		xl:fileName "../../datashuttle_tools/vs3/mappings/files/2008/ar08_vs3_E.csv" ;
+
 		xl:sheetNumber "0" ;
 		xl:constantGraph :SCOVODataset ;
 		xl:templateGraph :SCOVOvs3 ;
@@ -25,8 +24,7 @@
 			rdf:_1 [
 				a xl:RowShift ;
 				xl:restriction "A11:Y11"^^xl:Expr ;
-#				xl:repeat "13870";  # no. of rows minus start row (11)
-				xl:skipCondition "(LEFT(TRIM(A11), 1) != 'H')" ;
+				xl:skipCondition "EMPTY(A11) || (LEFT(A11, 1) != 'H')" ;
 				xl:steps "1" ;
 			] ;
 		]
@@ -38,42 +36,32 @@
 :SCOVODataset {
 	<> owl:import scv: .
 	
-	[ xl:uri "'http://example.org/dataShuttle/vs3-2008'"^^xl:Expr ] a scv:Dataset ;
+	[ xl:uri "'http://datashuttle.org/vs3'"^^xl:Expr ] a scv:Dataset ;
 	dc:title    "TRIM(A4)"^^xl:Expr ;
-	dc:creator  "Atchai" ;
-	dc:subject  "mortality";
+	dc:creator  "National Office of Statistics - Vital Statistics" ;
+	dc:subject  "Mortality";
 	dc:date     "NOW()"^^xl:Expr .
 
-	ex:statistic  a scv:Item .
-	ex:LAD     [ rdfs:label "LAD" ; rdfs:subClassOf scv:Dimension; owl:sameAs <http://statistics.data.gov.uk/def/administrative-geography/LocalAuthorityDistrict> ] .
-	ex:Year    [ rdfs:label "Year" ; rdfs:subClassOf scv:Dimension ] .
-	
-	ex:gender [ rdfs:label "Gender" ; rdfs:subClassOf scv:Dimension ; owl:sameAs <http://purl.oclc.org/argot/people/2009/09/gender/GenderConcept> ; rdfs:seeAlso <http://dbpedia.org/resource/Gender> ] .
-	[ xl:uri "'http://example.org/dataShuttle/gender/M'"^^xl:Expr ; rdfs:label "Male";  rdfs:subClassOf ex:gender ; owl:sameAs <http://purl.oclc.org/argot/people/2009/09/gender/Male>  ] .
-	[ xl:uri "'http://example.org/dataShuttle/gender/F'"^^xl:Expr ; rdfs:label "Female";  rdfs:subClassOf ex:gender ; owl:sameAs <http://purl.oclc.org/argot/people/2009/09/gender/Female>  ] .
-	
-	ex:age [ rdfs:label "Age" ; rdfs:subClassOf scv:Dimension; rdfs:seeAlso <http://xmlns.com/foaf/0.1/age> ] .
-	[ xl:uri "'http://example.org/dataShuttle/age/range'"^^xl:Expr ; rdfs:label "Range of Ages"; owl:sameAs <http://purl.oclc.org/argot/people/2009/09/age-group/AgeGroupConcept> ; rdfs:subClassOf scv:Dimension;  ] .
-	
-	ex:icd10 [ rdfs:label "ICD (International Classification of Diseases) 10th Revision" ; rdfs:subClassOf scv:Dimension; owl:sameAs <http://purl.oclc.org/argot/health/2009/09/disease/DiseaseConcept>; ] .
-	[ xl:uri "'http://example.org/dataShuttle/icd10/range'"^^xl:Expr ; rdfs:label "Range of ICD codes"; rdfs:subClassOf scv:Dimension;   ] .
+	<http://statistics.data.gov.uk/def/administrative-geography/LocalAuthorityDistrict>   [ rdfs:label "LAD" ; rdfs:subClassOf scv:Dimension ] .
+	<http://reference.data.gov.uk/def/intervals/CalendarYear>    [ rdfs:label "Year" ; rdfs:subClassOf scv:Dimension ] .
+	sdmx-code:Sex [ rdfs:label "Gender" ; rdfs:subClassOf scv:Dimension ] .
+	<http://purl.bioontology.org/ontology/ICD10> [ rdfs:label "ICD (International Classification of Diseases) 10th Revision" ; rdfs:subClassOf scv:Dimension ] .
 }
 
 
 
 :SCOVOvs3 {
-	[ xl:uri "'http://example.org/dataShuttle/vs3-2008/' & URLENCODE(TRIM(B11)) & '/' & URLENCODE(TRIM(A11)) & '/' & '2008' & '/'   & URLENCODE(TRIM(D11))"^^xl:Expr ] a ex:statistic ;
-	scv:dataset [ xl:uri "'http://example.org/dataShuttle/vs3-2008'"^^xl:Expr ] ;
+	[ xl:uri "'http://datashuttle.org/mortality/' & URLENCODE(TRIM(B11)) & '/' & URLENCODE(TRIM(A11)) & '/' & SUBSTRING(TRIM(A1), 31, 35) & '/'   & URLENCODE(TRIM(D11))"^^xl:Expr ] a scv:Item ;
+	scv:dataset [ xl:uri "'http://datashuttle.org/vs3'"^^xl:Expr ] ;
 	
-	scv:dimension [ xl:uri "'http://example.org/dataShuttle/LAD/' & URLENCODE(TRIM(A11))"^^xl:Expr ; owl:sameAs "'http://exstatistics.data.gov.uk/doc/local-authority-district/' & URLENCODE(TRIM(A11)) & '.rdf'"^^xl:Expr; rdfs:subClassOf <http://example.org/dataShuttle/LAD> ; rdfs:label "TRIM(A11)"^^xl:Expr ] ; # TODO the syntax for this sameAs is incorrect - it needs to be a URI rather than a String.
+	scv:dimension [ xl:uri "'http://statistics.data.gov.uk/id/local-authority-district/' & URLENCODE(SUBSTRING(TRIM(A11), 1))"^^xl:Expr ; a <http://statistics.data.gov.uk/def/administrative-geography/LocalAuthorityDistrict> ; rdfs:label "SUBSTRING(TRIM(A11), 1)"^^xl:Expr ] ;
 	
-	scv:dimension [ xl:uri "'http://example.org/dataShuttle/year/2008'"^^xl:Expr ; owl:sameAs "DBP_YEAR('2008')"^^xl:Expr ; rdfs:subClassOf <http://example.org/dataShuttle/Year> ; rdfs:label "'2008'"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://reference.data.gov.uk/id/year/' & SUBSTRING(TRIM(A1), 31, 35)"^^xl:Expr ; a <http://reference.data.gov.uk/def/intervals/CalendarYear> ; rdfs:label "SUBSTRING(TRIM(A1), 31, 35)"^^xl:Expr ] ;
 	
-	scv:dimension [ xl:uri "'http://example.org/dataShuttle/age/range/' & URLENCODE(TRIM(E7))"^^xl:Expr; rdfs:subClassOf <http://example.org/dataShuttle/age/range> ; rdfs:label "TRIM(E7)"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://purl.org/linked-data/sdmx/2009/code/sex-' & URLENCODE(TRIM(D11))"^^xl:Expr ; a sdmx-code:Sex; rdfs:label "TRIM(D11)"^^xl:Expr ] ;
 	
-	scv:dimension [ xl:uri "'http://example.org/dataShuttle/gender/' & URLENCODE(TRIM(D11))"^^xl:Expr ] ;
+	scv:dimension [ xl:uri "'http://purl.bioontology.org/ontology/ICD10/' & URLENCODE(TRIM(B11))"^^xl:Expr ; a <http://purl.bioontology.org/ontology/ICD10> ; rdfs:label "TRIM(B11)"^^xl:Expr ] ;
 	
-	scv:dimension [ xl:uri "'http://example.org/dataShuttle/icd10/range/' & URLENCODE(TRIM(B11))"^^xl:Expr; rdfs:subClassOf <http://example.org/dataShuttle/icd10/range> ; rdfs:label "TRIM(B11)"^^xl:Expr ] ;
 	rdf:value    "TRIM(E11)"^^xl:Expr .
 }
 
