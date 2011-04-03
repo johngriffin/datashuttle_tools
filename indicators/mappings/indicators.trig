@@ -16,7 +16,7 @@
 { [] a xl:Mapping ;
 	xl:offline "false"^^xsd:boolean ;
   xl:template [
-		xl:fileName "/Users/jg2950/dev/datashuttle_tools/indicators/mappings/files/indicators_clean.csv" ;
+		xl:fileName "../../datashuttle_tools/indicators/mappings/files/indicators_clean.csv" ;
 		xl:sheetNumber "0" ;
 		xl:templateGraph :Indicator ;
 		xl:transform [
@@ -35,7 +35,12 @@
   
   [ xl:uri "'http://datashuttle.org/indicator/mortality/' & URLENCODE(TRIM(A4)) & '/lad'"^^xl:Expr ] a ds:Indicator ;
     ds:icdRange [ xl:uri "'http://example.org/dataShuttle/icd10/range/' & URLENCODE(TRIM(A4))"^^xl:Expr; rdfs:subClassOf <http://example.org/dataShuttle/icd10/range> ; rdfs:label "TRIM(A4)"^^xl:Expr ] ;
-    dc:title "TRIM(B4) & 'mortality'"^^xl:Expr ;
-    dc:subject "mortality" .
+    dc:title "TRIM(B4) & ' Mortality by LAD'"^^xl:Expr ;
+    dc:subject "Mortality" ;
+    dc:spatial "LAD" ;
+    dc:description "'This indicator provides mortality statistics for ' & TRIM(B4) & ' by local authority district (LAD) by year.'"^^xl:Expr ;
+    ds:indicatorQualityStatement "'International Classification of Diseases: ' & TRIM(B4) & ' - ICD-10 codes ' & TRIM(A4)"^^xl:Expr; 
+    dc:publisher "National Office of Statistics - Vital Statistics";
+    rdfs:label "TRIM(B4)"^^xl:Expr; 
 }
 
