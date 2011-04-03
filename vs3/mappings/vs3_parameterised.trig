@@ -1,0 +1,67 @@
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix ex:	<http://example.org/dataShuttle/> .
+@prefix dc:     <http://purl.org/dc/elements/1.1/> .
+@prefix xl:	<http://purl.org/NET/xlwrap#> .
+@prefix scv:	<http://purl.org/NET/scovo#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix ohio:   <http://data.dh.gov.uk/ontology/ohio/> .
+@prefix sdmx-code:       <http://purl.org/linked-data/sdmx/2009/code#> .
+@prefix :       <http://datashuttle.org/> .
+
+{ [] a xl:Mapping ;
+	xl:offline "false"^^xsd:boolean ;
+  xl:template [
+		xl:fileName "${filename}" ;
+
+		xl:sheetNumber "0" ;
+		xl:constantGraph :SCOVODataset ;
+		xl:templateGraph :SCOVOvs3 ;
+		xl:transform [
+			a rdf:Seq ;
+			rdf:_1 [
+				a xl:RowShift ;
+				xl:restriction "A11:Y11"^^xl:Expr ;
+				xl:skipCondition "EMPTY(A11) || (LEFT(A11, 1) != 'H')" ;
+				xl:steps "1" ;
+			] ;
+		]
+	] .
+}
+
+
+
+:SCOVODataset {
+	<> owl:import scv: .
+	
+	[ xl:uri "'http://datashuttle.org/vs3'"^^xl:Expr ] a scv:Dataset ;
+	dc:title    "TRIM(A4)"^^xl:Expr ;
+	dc:creator  "National Office of Statistics - Vital Statistics" ;
+	dc:subject  "Mortality";
+	dc:date     "NOW()"^^xl:Expr .
+
+	<http://statistics.data.gov.uk/def/administrative-geography/LocalAuthorityDistrict>   [ rdfs:label "LAD" ; rdfs:subClassOf scv:Dimension ] .
+	<http://reference.data.gov.uk/def/intervals/CalendarYear>    [ rdfs:label "Year" ; rdfs:subClassOf scv:Dimension ] .
+	sdmx-code:Sex [ rdfs:label "Gender" ; rdfs:subClassOf scv:Dimension ] .
+	<http://purl.bioontology.org/ontology/ICD10> [ rdfs:label "ICD (International Classification of Diseases) 10th Revision" ; rdfs:subClassOf scv:Dimension ] .
+}
+
+
+
+:SCOVOvs3 {
+	[ xl:uri "'http://datashuttle.org/mortality/' & URLENCODE(TRIM(B11)) & '/' & URLENCODE(TRIM(A11)) & '/' & ${year_long} & '/'   & URLENCODE(TRIM(D11))"^^xl:Expr ] a scv:Item ;
+	scv:dataset [ xl:uri "'http://datashuttle.org/vs3'"^^xl:Expr ] ;
+	
+	scv:dimension [ xl:uri "'http://statistics.data.gov.uk/id/local-authority-district/' & URLENCODE(SUBSTRING(TRIM(A11), 1))"^^xl:Expr ; a <http://statistics.data.gov.uk/def/administrative-geography/LocalAuthorityDistrict> ; rdfs:label "SUBSTRING(TRIM(A11), 1)"^^xl:Expr ] ;
+	
+	scv:dimension [ xl:uri "'http://reference.data.gov.uk/id/year/' & ${year_long}"^^xl:Expr ; a <http://reference.data.gov.uk/def/intervals/CalendarYear> ; rdfs:label "${year_long}"^^xl:Expr ] ;
+	
+	scv:dimension [ xl:uri "'http://purl.org/linked-data/sdmx/2009/code/sex-' & URLENCODE(TRIM(D11))"^^xl:Expr ; a sdmx-code:Sex; rdfs:label "TRIM(D11)"^^xl:Expr ] ;
+	
+	scv:dimension [ xl:uri "'http://purl.bioontology.org/ontology/ICD10/' & URLENCODE(TRIM(B11))"^^xl:Expr ; a <http://purl.bioontology.org/ontology/ICD10> ; rdfs:label "TRIM(B11)"^^xl:Expr ] ;
+	
+	rdf:value    "TRIM(E11)"^^xl:Expr .
+}
+
