@@ -499,6 +499,7 @@
    <field name="icd" type="string" indexed="true" stored="true" required="true" />
    <field name="area" type="string" indexed="true" stored="true" required="true" />
    <field name="area_name" type="string" indexed="true" stored="true" required="true" />
+   <field name="area_location" type="location" indexed="true" stored="true" required="true" />
    <field name="year" type="tint" indexed="true" stored="true" required="true" />
    <field name="gender" type="string" indexed="true" stored="true" required="true" />
    <field name="value" type="tint" indexed="true" stored="true" required="true" />
