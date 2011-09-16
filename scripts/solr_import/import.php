@@ -29,7 +29,7 @@ require_once('lib/Apache/Solr/Service.php');
 require_once('lib/Apache/Solr/HttpTransport/Curl.php');
 
 ini_set('max_execution_time', 0);
-ini_set('memory_limit', '512M'); // HACK: Why is fetch_assoc leaking?
+ini_set('memory_limit', '1024M'); // HACK: Why is fetch_assoc leaking?
 
 // Connect to DB
 $db = new mysqli($config['db']['host'], $config['db']['user'], $config['db']['pass'], $config['db']['name']);
@@ -98,8 +98,50 @@ if (!$result) {
 $start = time();
 $count = 0;
 
+$aggregate = array();
+
 // Iterate over DB rows adding each one as a SOLR doc
 while ($row = $result->fetch_assoc()) {
+
+	// Add row to Solr
+	$doc = add_row($row);
+
+	// Add aggregate data
+	$aggregate[$doc->icd][$doc->area][$doc->year][$row['gender']] = $row['value'];
+
+	// If we have both male and female values add the aggregate value to Solr
+	if (count($aggregate[$doc->icd][$doc->area][$doc->year]) == 2) {
+
+		$row['gender'] = 'A';
+		$row['value'] = array_sum($aggregate[$doc->icd][$doc->area][$doc->year]);
+
+		add_row($row);
+
+		unset($aggregate[$doc->icd][$doc->area][$doc->year]);
+
+	}
+
+}
+
+// Clean-up SOLR
+$solr->commit();
+$solr->optimize();
+
+// Clean-up DB
+$result->free();
+$db->close();
+
+// Stats
+$len = time() - $start;
+printf("\nAdded %d rows in %d seconds (~%d rows per second)\n", $count, $len, $count / $len);
+
+
+/**
+ * Helper function to create a Solr document from a DB row and add it to the index
+ */
+function add_row($row) {
+
+	global $lads, $solr, $count;
 
 	// Extract LAD from row ID
 	if (!preg_match('#^http://datashuttle\.org/mortality/[\w\d-%.]+/([\w\d]+)/\d+/[MF]$#', $row['id'], $matches)) {
@@ -136,20 +178,7 @@ while ($row = $result->fetch_assoc()) {
 
 	printf("ADDED: %06d (%dMB)\n", ++$count, memory_get_usage()/1024/1024);
 
-	unset($row);
-	unset($doc);
+	return $doc;
 
 }
-
-// Clean-up SOLR
-$solr->commit();
-$solr->optimize();
-
-// Clean-up DB
-$result->free();
-$db->close();
-
-// Stats
-$len = time() - $start;
-printf("\nAdded %d rows in %d seconds (~%d rows per second)\n", $count, $len, $count / $len);
 
