@@ -14,6 +14,7 @@ class Import {
 			'user'	=> 'datashuttle',
 			'pass'	=> 'datashuttle',
 			'name'	=> 'datashuttle',
+			'table'	=> 'nic_indicators',
 		),
 
 		// Solr server
@@ -31,6 +32,11 @@ class Import {
 			'type'		=> 'observation',
 		),
 
+		// Output database
+		'db_out' => array(
+			'table'	=> 'mortality',
+		),
+
 		// Kasabi
 		'kasabi' => array(
 			'url'	=> 'http://api.kasabi.com/dataset/ordnance-survey-linked-data/apis/sparql',
@@ -44,23 +50,52 @@ class Import {
 
 	public function __construct() {
 
+		global $argc, $argv;
+
 		ini_set('max_execution_time', 0);
-		ini_set('memory_limit', '128M');
+		ini_set('memory_limit', '1024M');
+
+		// Connect to DB
+		$this->db = new mysqli($this->config['db']['host'], $this->config['db']['user'], $this->config['db']['pass'], $this->config['db']['name']);
+		if ($this->db->connect_errno) {
+			die("Unable to connect to DB\n");
+		}
 
 		// Check what server we're importing to (what adapter to use)
-		$opt = getopt('s:');
-
-		if (!count($opt) || ($opt['s'] != 'solr' && $opt['s'] != 'es')) {
-			die("usage: ./import.php -s [solr|es]\n");
+		if ($argc != 2) {
+			$this->usage();
 		}
 
 		// Init adapter
-		if ($opt['s'] == 'solr') {
-			$this->adapter = new ImportAdapterSolr($this->config['solr']);
-		} elseif ($opt['s'] == 'es') {
-			$this->adapter = new ImportAdapterES($this->config['es']);
+		switch ($argv[1]) {
+
+			case 'solr':
+				$this->adapter = new ImportAdapterSolr($this->config['solr']);
+				break;
+
+			case 'es':
+				$this->adapter = new ImportAdapterES($this->config['es']);
+				break;
+
+			case 'db':
+				$config = array_merge($this->config['db_out'], array('db' => $this->db));
+				$this->adapter = new ImportAdapterMySQL($config);
+				break;
+
+			default:
+				$this->usage();
+
 		}
 
+	}
+
+	public function __destruct() {
+		$this->db->close();
+	}
+
+	private function usage() {
+		global $argv;
+		die("usage: $argv[0] [solr|es|db]\n");
 	}
 
 	public function run() {
@@ -71,14 +106,8 @@ class Import {
 		// Delete existing index
 		$this->adapter->deleteIndex();
 
-		// Connect to DB
-		$db = new mysqli($this->config['db']['host'], $this->config['db']['user'], $this->config['db']['pass'], $this->config['db']['name']);
-		if ($db->connect_errno) {
-			die("Unable to connect to DB\n");
-		}
-
 		// Fetch all rows from DB
-		$result = $db->query('SELECT * FROM nic_indicators');
+		$result = $this->db->query('SELECT * FROM ' . $this->config['db']['table']);
 		if (!$result) {
 			die("Unable to query DB\n");
 		}
@@ -86,16 +115,16 @@ class Import {
 		$aggregate = array();
 		$start = time();
 
-		// Iterate over DB rows adding each one as a SOLR doc
+		// Iterate over DB rows adding each one
 		while ($row = $result->fetch_assoc()) {
 
 			// Extract LAD from row ID
 			list($icd, $area, $year, $gender) = $this->parseId($row['id']);
 
 			// Lookup LAD
-			$lad = $this->lads[$area];
+			$area_id = $this->lads[$area];
 
-			if (!isset($lad)) {
+			if (!isset($area_id)) {
 				print "ERROR: Couldn't find LAD: $area\n";
 				continue;
 			}
@@ -104,9 +133,7 @@ class Import {
 			$doc = array(
 				'id'			=> $row['id'],
 				'icd'			=> $row['icdcode'],
-				'area'			=> $area,
-				'area_name'		=> $lad['label'],
-				'area_location'	=> $lad['lat'] . ',' . $lad['lng'],
+				'area_id'		=> $area_id,
 				'year'			=> $row['year'],
 				'gender'		=> $row['gender'],
 				'value'			=> $row['value'],
@@ -121,7 +148,6 @@ class Import {
 
 		// Clean-up DB
 		$result->free();
-		$db->close();
 
 		// Stats
 		$len = time() - $start;
@@ -131,56 +157,178 @@ class Import {
 
 	private function fetchLADs() {
 
-		print "Fetching LADs...";
+		print "Fetching LADs";
 
-		$url = sprintf('%s?%s',
-			$this->config['kasabi']['url'],
-			http_build_query(array(
-				'apikey' => $this->config['kasabi']['key'],
-				'output' => 'json',
-				'query' => "
-					select distinct ?label ?census ?lat ?long
-					where {
-						?s <http://data.ordnancesurvey.co.uk/ontology/admingeo/hasCensusCode> ?census .
-						?s <http://www.w3.org/2004/02/skos/core#altLabel> ?label .
-						?s <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .
-						?s <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .
-					}"
-			))
+		// Create table
+		$result = $this->db->query("
+			CREATE TABLE IF NOT EXISTS `mortality_areas` (
+				`area_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+				`area_code` varchar(255) NOT NULL,
+				`area_name` varchar(255) NOT NULL,
+				`area_boundry` longtext NOT NULL,
+				PRIMARY KEY (`area_id`)
+			) ENGINE=MyISAM  DEFAULT CHARSET=utf8"
 		);
 
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HEADER, false);
-
-		$data = curl_exec($ch);
-		curl_close($ch);
-
-		$data = json_decode($data, true);
-		if (is_null($data) || !isset($data['results']['bindings'])) {
-			die("Unable to parse JSON data");
+		if (!$result) {
+			die("Unable to create table: mortality_areas\n");
 		}
 
-		foreach($data['results']['bindings'] as $lad) {
-			$this->lads['H' . $lad['census']['value']] = array(
-				'label'	=> $lad['label']['value'],
-				'lat'	=> $lad['lat']['value'],
-				'lng'	=> $lad['long']['value'],
+		$result = $this->db->query('TRUNCATE `mortality_areas`');
+
+		if (!$result) {
+			die("Unable to truncate table: mortality_areas\n");
+		}
+
+		// Prepare insert statement
+		$insert = $this->db->prepare("
+			INSERT INTO `mortality_areas` (`area_id`, `area_code`, `area_name`, `area_boundry`)
+			VALUES (NULL, ?, ?, ?)"
+		);
+
+		$insert->bind_param('sss', $code, $name, $boundry);
+
+		// Fetch LADs
+		$limit = 25;
+		$offset = 0;
+
+		do {
+
+			$url = sprintf('%s?%s',
+				$this->config['kasabi']['url'],
+				http_build_query(array(
+					'apikey' => $this->config['kasabi']['key'],
+					'output' => 'json',
+					'query' => sprintf("
+						select distinct ?label ?census ?lat ?long ?extent ?GML
+						where {
+							?s <http://data.ordnancesurvey.co.uk/ontology/admingeo/hasCensusCode> ?census .
+							?s <http://www.w3.org/2004/02/skos/core#altLabel> ?label .
+							?s <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .
+							?s <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .
+							?s <http://data.ordnancesurvey.co.uk/ontology/geometry/extent> ?extent .
+							?extent <http://data.ordnancesurvey.co.uk/ontology/geometry/asGML> ?GML .
+						}
+						limit %d
+						offset %d",
+						$limit,
+						$offset
+					)
+				))
 			);
-		}
 
-		print "done\n\n";
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, $url);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_HEADER, false);
+
+			$data = curl_exec($ch);
+			curl_close($ch);
+
+			$json = json_decode($data, true);
+			if (is_null($json) || !isset($json['results']['bindings'])) {
+				print_r($data);
+				die("Unable to parse JSON data");
+			}
+
+			if (count($json['results']['bindings'])) {
+				foreach($json['results']['bindings'] as $lad) {
+
+					$code = 'H' . $lad['census']['value'];
+
+					if (isset($this->lads[$code])) {
+						// Skip duplicates
+						continue;
+					}
+
+					$name = $lad['label']['value'];
+					$boundry = $this->convertGMLtoGeoJSON($lad['GML']['value'], $code);
+
+					// Add area
+					$result = $insert->execute();
+					if (!$result) {
+						die("Couldn't insert LAD: $code\n");
+					}
+
+					$this->lads[$code] = $this->db->insert_id;
+
+				}
+			}
+
+			print ".";
+
+			$offset += $limit;
+
+		} while(count($json['results']['bindings']));
+
+		$insert->close();
+
+		printf(" done (%d total)\n\n", count($this->lads));
 
 	}
 
 	private function parseId($id) {
 
-		if (!preg_match('#^http://datashuttle\.org/mortality/([\w\d-%.]+)/([\w\d]+)/(\d+)/([MFA])$#', $id, $matches)) {
+		if (!preg_match('#^http://datashuttle\.org/mortality/([\w\d-%.]+)/([\w\d]+)/(\d+)/([MF])$#', $id, $matches)) {
 			die("ERROR: Couldn't parse ID: " . $id . "\n");
 		}
 
 		return array($matches[1], $matches[2], $matches[3], $matches[4]);
+
+	}
+
+	private function convertGMLtoGeoJSON($text, $area) {
+
+		require_once 'lib/phpcoord/phpcoord-2.3.php';
+		require_once 'lib/polyline-reducer/polyline-reducer.php';
+
+		// Get coordinates from GML
+		$doc = new DOMDocument();
+		if (!$doc->loadXML($text)) {
+			die ("Unable to load GML");
+		}
+
+		$posList = $doc->getElementsByTagNameNS('http://www.opengis.net/gml', 'posList')->item(0);
+
+		$points = explode(' ', trim($posList->nodeValue));
+		$numPoints = count($points);
+
+		$coords = array();
+
+		for ($i = 0; $i < $numPoints; $i += 2) {
+
+			// Convert Eastings Northings to Latitude Longitude
+			$os = new OSRef($points[$i], $points[$i+1]);
+			$ll = $os->toLatLng();
+
+			// Convert from OSGB36 datum (used by OS) to WGS84 datum (used by everything else!)
+			$ll->OSGB36ToWGS84();
+
+			// Add point to coordinates list
+			$coords[] = new GeoPoint($ll->lat, $ll->lng);
+
+		}
+
+		// Simplify polygon using Douglas-Peucker algorithm
+		// See: http://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm
+		$reducer = new PolylineReducer($coords);
+
+		$coords = array();
+		foreach($reducer->SimplerLine(0.0001) as $point) {
+			$coords[] = array($point->longitude, $point->latitude);
+		}
+
+		// Create GeoJSON feature structure
+		$feature = new StdClass();
+		$feature->id		= 'area_' . $area;
+		$feature->type		= 'Feature';
+		$feature->geometry	= array(
+			'type'			=> 'Polygon',
+			'coordinates'	=> array($coords),
+		);
+
+		// Return as JSON string
+		return json_encode($feature);
 
 	}
 
@@ -314,6 +462,58 @@ class ImportAdapterES implements ImportAdapter {
 
 		return (bool)$response->ok;
 
+	}
+
+}
+
+class ImportAdapterMySQL implements ImportAdapter {
+
+	private $config;
+	private $db;
+
+	public function __construct($config) {
+
+		$this->config = $config;
+		$this->db = $config['db'];
+
+		$result = $this->db->query("
+			CREATE TABLE IF NOT EXISTS " . $config['table'] . " (
+				`id` varchar(255) NOT NULL,
+				`icd` varchar(255) NOT NULL,
+				`area_id` int(10) unsigned NOT NULL,
+				`year` int(10) unsigned NOT NULL,
+				`gender` char(1) NOT NULL,
+				`value` int(10) unsigned NOT NULL,
+				PRIMARY KEY (id),
+				KEY `area_id` (`area_id`)
+			) ENGINE=MyISAM DEFAULT CHARSET=utf8"
+		);
+
+		if (!$result) {
+			die("Unable to create table: " . $config['table']);
+		}
+
+	}
+
+	public function addDoc($doc, $count) {
+
+		$insert = $this->db->prepare("
+			INSERT INTO `" . $this->config['table'] . "` (`id`, `icd`, `area_id`, `year`, `gender`, `value`)
+			VALUES (?, ?, ?, ?, ?, ?)"
+		);
+
+		if (!$insert) {
+			die ("Unable to prepare insert statement");
+		}
+
+		$insert->bind_param('ssiisi', $doc['id'], $doc['icd'], $doc['area_id'], $doc['year'], $doc['gender'], $doc['value']);
+		$insert->execute();
+		$insert->close();
+
+	}
+
+	public function deleteIndex() {
+		return $this->db->query('TRUNCATE ' . $this->config['table']);
 	}
 
 }
