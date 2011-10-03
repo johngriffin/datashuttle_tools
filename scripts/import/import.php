@@ -125,8 +125,7 @@ class Import {
 			$area_id = $this->lads[$area];
 
 			if (!isset($area_id)) {
-				print "ERROR: Couldn't find LAD: $area\n";
-				continue;
+				die("ERROR: Couldn't find LAD: $area\n");
 			}
 
 			// Create document
@@ -189,7 +188,7 @@ class Import {
 		$insert->bind_param('sss', $code, $name, $boundry);
 
 		// Fetch LADs
-		$limit = 25;
+		$limit = 20;
 		$offset = 0;
 
 		do {
@@ -314,7 +313,7 @@ class Import {
 		$reducer = new PolylineReducer($coords);
 
 		$coords = array();
-		foreach($reducer->SimplerLine(0.0001) as $point) {
+		foreach($reducer->SimplerLine(0.01) as $point) {
 			$coords[] = array($point->longitude, $point->latitude);
 		}
 
