@@ -34,7 +34,12 @@ class Import {
 
 		// Output database
 		'db_out' => array(
-			'table'	=> 'mortality',
+			'table'				=> 'mortality',
+			'areas_table'		=> 'mortality_areas',
+			'chapters_table'	=> 'mortality_chapters',
+			'chapters_file'		=> 'csv/chapters.csv',
+			'diseases_table'	=> 'mortality_diseases',
+			'diseases_file'		=> 'csv/chapters_hierarchy.csv',
 		),
 
 		// Kasabi
@@ -44,7 +49,11 @@ class Import {
 		),
 	);
 
+	// Lookup tables
 	private $lads = array();
+	private $chapters = array();
+	private $diseases = array();
+
 	private $adapter;
 	private $count = 0;
 
@@ -100,8 +109,14 @@ class Import {
 
 	public function run() {
 
+		// Fetch ICD chapters
+		$this->fetchChapters($this->config['db_out']);
+
+		// Fetch ICD diseases
+		$this->fetchDiseases($this->config['db_out']);
+
 		// Fetch LADs
-		$this->fetchLADs();
+		$this->fetchLADs($this->config['db_out']);
 
 		// Delete existing index
 		$this->adapter->deleteIndex();
@@ -123,15 +138,21 @@ class Import {
 
 			// Lookup LAD
 			$area_id = $this->lads[$area];
-
 			if (!isset($area_id)) {
 				die("ERROR: Couldn't find LAD: $area\n");
+			}
+
+			// Lookup disease
+			$disease_id = $this->diseases[$row['icdcode']];
+			if (!isset($disease_id)) {
+				print_r($this->diseases);
+				die("ERROR: Couldn't find disease: $row[icdcode]\n");
 			}
 
 			// Create document
 			$doc = array(
 				'id'			=> $row['id'],
-				'icd'			=> $row['icdcode'],
+				'disease_id'	=> $disease_id,
 				'area_id'		=> $area_id,
 				'year'			=> $row['year'],
 				'gender'		=> $row['gender'],
@@ -154,13 +175,158 @@ class Import {
 
 	}
 
-	private function fetchLADs() {
+	private function fetchChapters($config) {
+
+		print "Fetching chapters...";
+
+		// Detect line endings so we don't choke on CR only files
+		ini_set('auto_detect_line_endings', true);
+
+		// Open chapters CSV
+		$csv = fopen($config['chapters_file'], 'r');
+		if ($csv === false) {
+			die("Unable to open chapters CSV file: $config[chapters_file]\n");
+		}
+
+		// Create table
+		$result = $this->db->query("
+			CREATE TABLE IF NOT EXISTS `$config[chapters_table]` (
+				`chapter_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+				`chapter_code` varchar(255) NOT NULL,
+				`chapter_name` varchar(255) NOT NULL,
+				PRIMARY KEY (`chapter_id`)
+			) ENGINE=MyISAM  DEFAULT CHARSET=utf8"
+		);
+
+		if (!$result) {
+			die("Unable to create table: $config[chapters_table]\n");
+		}
+
+		$result = $this->db->query("TRUNCATE `$config[chapters_table]`");
+
+		if (!$result) {
+			die("Unable to truncate table: $config[chapters_table]\n");
+		}
+
+		// Prepare insert statement
+		$insert = $this->db->prepare("
+			INSERT INTO `$config[chapters_table]` (`chapter_id`, `chapter_code`, `chapter_name`)
+			VALUES (NULL, ?, ?)"
+		);
+
+		$insert->bind_param('ss', $code, $name);
+
+		$count = 0;
+
+		while (($row = fgetcsv($csv, 4096, ',')) !== false) {
+
+			// Skip header row
+			if (++$count === 1) {
+				continue;
+			}
+
+			// Insert chapter
+			$code = $row[0];
+			$name = $row[2];
+			$insert->execute();
+
+			$this->chapters[$row[1]] = $this->db->insert_id;
+
+		}
+
+		$insert->close();
+
+		printf("done (%d chapters)\n", $count);
+
+	}
+
+	private function fetchDiseases($config) {
+
+		print "Fetching diseases...";
+
+		// Detect line endings so we don't choke on CR only files
+		ini_set('auto_detect_line_endings', true);
+
+		// Open chapters CSV
+		$csv = fopen($config['diseases_file'], 'r');
+		if ($csv === false) {
+			die("Unable to open diseases CSV file: $config[diseases_file]\n");
+		}
+
+		// Create table
+		$result = $this->db->query("
+			CREATE TABLE IF NOT EXISTS `$config[diseases_table]` (
+				`disease_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+				`chapter_id` int(10) unsigned NOT NULL,
+				`disease_icd` varchar(255) NOT NULL,
+				`disease_name` varchar(255) NOT NULL,
+				PRIMARY KEY (`disease_id`)
+			) ENGINE=MyISAM  DEFAULT CHARSET=utf8"
+		);
+
+		if (!$result) {
+			die("Unable to create table: $config[diseases_table]\n");
+		}
+
+		$result = $this->db->query("TRUNCATE `$config[diseases_table]`");
+
+		if (!$result) {
+			die("Unable to truncate table: $config[diseases_table]\n");
+		}
+
+		// Prepare insert statement
+		$insert = $this->db->prepare("
+			INSERT INTO `$config[diseases_table]` (`disease_id`, `chapter_id`, `disease_icd`, `disease_name`)
+			VALUES (NULL, ?, ?, ?)"
+		);
+
+		$insert->bind_param('iss', $chapter_id, $icd, $name);
+
+		$count = 0;
+
+		while (($row = fgetcsv($csv, 4096, ',')) !== false) {
+
+			// Skip header row
+			if (++$count === 1) {
+				continue;
+			}
+
+			$chapter = trim($row[3]);
+
+			if (!isset($this->chapters[$chapter])) {
+				die("Unknown chapter: $chapter\n");
+			}
+
+			$chapter_id = $this->chapters[$chapter];
+			$icd = trim($row[0]);
+			$name = trim($row[1]);
+
+			// Remove chapter prefix from disease name (if it exists)
+			$chapter_num = trim($row[2]);
+
+			if (strpos($name, $chapter_num) === 0) {
+				$name = trim(substr($name, strlen($chapter_num)));
+			}
+
+			// Insert disease
+			$insert->execute();
+
+			$this->diseases[$icd] = $this->db->insert_id;
+
+		}
+
+		$insert->close();
+
+		printf("done (%d diseases)\n", $count);
+
+	}
+	private function fetchLADs($config) {
 
 		print "Fetching LADs";
 
 		// Create table
 		$result = $this->db->query("
-			CREATE TABLE IF NOT EXISTS `mortality_areas` (
+			CREATE TABLE IF NOT EXISTS `$config[areas_table]` (
 				`area_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
 				`area_code` varchar(255) NOT NULL,
 				`area_name` varchar(255) NOT NULL,
@@ -170,18 +336,31 @@ class Import {
 		);
 
 		if (!$result) {
-			die("Unable to create table: mortality_areas\n");
+			die("Unable to create table: $config[areas_table]\n");
 		}
 
-		$result = $this->db->query('TRUNCATE `mortality_areas`');
+		// Skip adding LADs if the table isn't empty
+		$result = $this->db->query("SELECT area_id, area_code FROM `$config[areas_table]`");
+		if ($result && $result->num_rows > 0) {
+
+			while($row = $result->fetch_assoc()) {
+				$this->lads[$row['area_code']] = $row['area_id'];
+			}
+
+			printf(" done (%d total)\n\n", count($this->lads));
+			return;
+
+		}
+
+		$result = $this->db->query("TRUNCATE `$config[areas_table]`");
 
 		if (!$result) {
-			die("Unable to truncate table: mortality_areas\n");
+			die("Unable to truncate table: $config[areas_table]\n");
 		}
 
 		// Prepare insert statement
 		$insert = $this->db->prepare("
-			INSERT INTO `mortality_areas` (`area_id`, `area_code`, `area_name`, `area_boundry`)
+			INSERT INTO `$config[areas_table]` (`area_id`, `area_code`, `area_name`, `area_boundry`)
 			VALUES (NULL, ?, ?, ?)"
 		);
 
@@ -477,13 +656,14 @@ class ImportAdapterMySQL implements ImportAdapter {
 
 		$result = $this->db->query("
 			CREATE TABLE IF NOT EXISTS " . $config['table'] . " (
-				`id` varchar(255) NOT NULL,
-				`icd` varchar(255) NOT NULL,
+				`id` varchar(128) NOT NULL,
+				`disease_id` int(10) NOT NULL,
 				`area_id` int(10) unsigned NOT NULL,
 				`year` int(10) unsigned NOT NULL,
 				`gender` char(1) NOT NULL,
 				`value` int(10) unsigned NOT NULL,
 				PRIMARY KEY (id),
+				KEY `disease_id` (`disease_id`),
 				KEY `area_id` (`area_id`)
 			) ENGINE=MyISAM DEFAULT CHARSET=utf8"
 		);
@@ -497,7 +677,7 @@ class ImportAdapterMySQL implements ImportAdapter {
 	public function addDoc($doc, $count) {
 
 		$insert = $this->db->prepare("
-			INSERT INTO `" . $this->config['table'] . "` (`id`, `icd`, `area_id`, `year`, `gender`, `value`)
+			INSERT INTO `" . $this->config['table'] . "` (`id`, `disease_id`, `area_id`, `year`, `gender`, `value`)
 			VALUES (?, ?, ?, ?, ?, ?)"
 		);
 
@@ -505,7 +685,7 @@ class ImportAdapterMySQL implements ImportAdapter {
 			die ("Unable to prepare insert statement");
 		}
 
-		$insert->bind_param('ssiisi', $doc['id'], $doc['icd'], $doc['area_id'], $doc['year'], $doc['gender'], $doc['value']);
+		$insert->bind_param('siiisi', $doc['id'], $doc['disease_id'], $doc['area_id'], $doc['year'], $doc['gender'], $doc['value']);
 		$insert->execute();
 		$insert->close();
 
