@@ -1,0 +1,117 @@
+Code,Title,Chapter,Chapter Range
+A00-B99                     ,I Certain infectious and parasitic diseases,I,A00-B99
+A00-A09                     ,Intestinal infectious diseases   ,I,A00-B99
+A15-A16                     ,Respiratory tuberculosis         ,I,A00-B99
+A17-A19                     ,Other tuberculosis               ,I,A00-B99
+A39                         ,Meningococcal infection          ,I,A00-B99
+A40-A41                     ,Septicaemia                      ,I,A00-B99
+B15-B19                     ,Viral hepatitis                  ,I,A00-B99
+B20-B24                     ,Human immunodeficiency virus [HIV] disease         ,I,A00-B99
+B35-B49                     ,Mycoses                          ,I,A00-B99
+B90                         ,Sequelae of tuberculosis         ,I,A00-B99
+C00-D48                     ,II Neoplasms                     ,II,C00-D48
+C00-C97                     ,Malignant neoplasms              ,II,C00-D48
+C00-C14                     ,"Malignant neoplasms of lip, oral cavity and pharynx              ",II,C00-D48
+C15-C26                     ,Malignant neoplasms of digestive organs                ,II,C00-D48
+C15                         ,Malignant neoplasm of oesophagus                                  ,II,C00-D48
+C16                         ,Malignant neoplasm of stomach    ,II,C00-D48
+C18                         ,Malignant neoplasm of colon      ,II,C00-D48
+C19-C21                     ,"Malignant neoplasm of rectosigmoid junction, rectum and anus                              ",II,C00-D48
+C22                         ,Malignant neoplasm of liver and intrahepatic bile ducts       ,II,C00-D48
+C23-C24                     ,Malignant neoplasm of gallbladder and biliary tract               ,II,C00-D48
+C25                         ,Malignant neoplasm of pancreas   ,II,C00-D48
+C32                         ,Malignant neoplasm of larynx     ,II,C00-D48
+C33-C34                     ,"Malignant neoplasm of trachea, bronchus and lung          ",II,C00-D48
+C43                         ,Malignant melanoma of skin       ,II,C00-D48
+C44                         ,Other malignant neoplasms of skin                                  ,II,C00-D48
+C45                         ,Mesothelioma                     ,II,C00-D48
+C46                         ,Kaposi's sarcoma                 ,II,C00-D48
+C50                         ,Malignant neoplasm of breast     ,II,C00-D48
+C53                         ,Malignant neoplasm of cervix uteri                                 ,II,C00-D48
+C54-C55                     ,Malignant neoplasm of other and unspecified parts of uterus                                          ,II,C00-D48
+C56                         ,Malignant neoplasm of ovary      ,II,C00-D48
+C61                         ,Malignant neoplasm of prostate   ,II,C00-D48
+C62                         ,Malignant neoplasm of testis     ,II,C00-D48
+C64                         ,"Malignant neoplasm of kidney, except renal pelvis                  ",II,C00-D48
+C67                         ,Malignant neoplasm of bladder    ,II,C00-D48
+C69-C72                     ,"Malignant neoplasms of eye,      ",II,C00-D48
+C69-C72                     ,brain and other parts of brain and other parts of central nervous system                           ,II,C00-D48
+C81                         ,Hodgkin's disease                ,II,C00-D48
+C82-C85                     ,Non-Hodgkin's lymphoma           ,II,C00-D48
+C90                         ,Multiple myeloma and malignant plasma cell neoplasms              ,II,C00-D48
+C91-C95                     ,Leukaemia                        ,II,C00-D48
+C92                         ,Myeloid leukaemia                ,II,C00-D48
+C97                         ,Malignant neoplasms of independent (primary) multiple sites                                          ,II,C00-D48
+D00-D48                     ,"In situ and benign neoplasms, and neoplasms of uncertain or unknown behaviour                        ",II,C00-D48
+D50-D89                     ,III Diseases of the blood and blood-forming organs and certain disorders involving the  immune mechanism                               ,III,D50-D89
+D50-D64                     ,Anaemias                         ,III,D50-D89
+E00-E90                     ,"IV Endocrine, nutritional and metabolic diseases                   ",IV,E00-E90
+E10-E14                     ,Diabetes mellitus                ,IV,E00-E90
+F00-F99                     ,V Mental and behavioural disorders                                 ,V,F00-F99
+"F01,F03                     ",Vascular and unspecified dementia                                 ,V,F00-F99
+F10-F19                     ,Mental and behavioural disorders due to psychoactive substance use                                  ,V,F00-F99
+G00-G99                     ,VI Diseases of the nervous system                                ,VI,G00-G99
+G00-G03                     ,Meningitis (excluding meningoccal)                                 ,VI,G00-G99
+G12.2                       ,Motor neuron disease             ,VI,G00-G99
+G20                         ,Parkinson's disease              ,VI,G00-G99
+G30                         ,Alzheimer's disease              ,VI,G00-G99
+G35                         ,Multiple sclerosis               ,VI,G00-G99
+G40                         ,Epilepsy                         ,VI,G00-G99
+H00-H59                     ,VII Diseases of the eye and adnexa                                 ,VII,H00-H59
+H60-H95                     ,VIII Diseases of the ear and mastoid process                      ,VIII,H60-H95
+I00-I99                     ,IX Diseases of the circulatory system                              ,IX,I00-I99
+I05-I09                     ,Chronic rheumatic heart diseases                                  ,IX,I00-I99
+I10-I15                     ,Hypertensive diseases            ,IX,I00-I99
+I20-I25                     ,Ischaemic heart diseases         ,IX,I00-I99
+I21-I22                     ,Acute myocardial infarction      ,IX,I00-I99
+I23-I25                     ,Ischaemic heart diseases other than myocardial infarction         ,IX,I00-I99
+I26-I52                     ,Other heart diseases             ,IX,I00-I99
+I60-I69                     ,Cerebrovascular diseases         ,IX,I00-I99
+I60-I62                     ,Intracranial haemorrhage         ,IX,I00-I99
+I63                         ,Cerebral infarction              ,IX,I00-I99
+I64                         ,"Stroke, not specified as haemorrhage or infarction                 ",IX,I00-I99
+I70                         ,Atherosclerosis                  ,IX,I00-I99
+I71                         ,Aortic aneurysm and dissection                                    ,IX,I00-I99
+I80                         ,Phlebitis and thrombophlebitis   ,IX,I00-I99
+J00-J99                     ,X Diseases of the respiratory system                              ,X,J00-J99
+J10-J11                     ,Influenza                        ,X,J00-J99
+J12-J18                     ,Pneumonia                        ,X,J00-J99
+J40-J44                     ,"Bronchitis, emphysema and other chronic obstructive pulmonary disease                           ",X,J00-J99
+J45-J46                     ,Asthma and status asthmaticus    ,X,J00-J99
+K00-K93                     ,XI Diseases of the digestive system                                ,XI,K00-K93
+K25-K27                     ,Gastric and duodenal ulcer       ,XI,K00-K93
+K35-K38                     ,Diseases of appendix             ,XI,K00-K93
+K40-K46                     ,Hernia                           ,XI,K00-K93
+K57                         ,Diverticular disease of intestine                                 ,XI,K00-K93
+K70-K77                     ,Diseases of the liver            ,XI,K00-K93
+L00-L99                     ,XII Diseases of the skin and subcutaneous tissue                  ,XII,L00-L99
+M00-M99                     ,XIII Diseases of the musculoskeletal system and connective tissue                             ,XIII,M00-M99
+"M05-M06,M08                 ",Rheumatoid arthritis and juvenile arthritis                       ,XIII,M00-M99
+M80-M81                     ,Osteoporosis                     ,XIII,M00-M99
+N00-N99                     ,XIV Diseases of the genitourinary system                          ,XIV,N00-N99
+N00-N16                     ,Glomerular and renal tubulo-interstitial diseases                 ,XIV,N00-N99
+N17-N19                     ,Renal failure                    ,XIV,N00-N99
+N40                         ,Hyperplasia of prostate          ,XIV,N00-N99
+O00-O99                     ,"XV Pregnancy, childbirth and the puerperium                        ",XV,O00-O99
+P00-P96                     ,XVI Certain conditions originating in the perinatal period                                         ,XVI,P00-P96
+Q00-Q99                     ,"XVII Congenital malformations, deformations and chromosomal abnormalities                          ",XVII,Q00-Q99
+Q20-Q28                     ,Congenital malformations of the circulatory system                ,XVII,Q00-Q99
+R00-R99                     ,"XVIII Symptoms, signs and abnormal clinical and laboratory findings, not elsewhere classified                                          ",XVIII,R00-R99
+R54                         ,Senility without mention of psychosis                             ,XVIII,R00-R99
+R95                         ,Sudden infant death syndrome     ,XVIII,R00-R99
+R99                         ,Other ill-defined and unspecified causes of mortality             ,XVIII,R00-R99
+"U50.9,V01-Y89               ",XX External causes of morbidity and mortality                     ,XX,V01-Y98
+V01-X59                     ,Accidents                        ,XX,V01-Y98
+"V01-V99,Y85                 ",Transport accidents including sequelae of transport accidents     ,XX,V01-Y98
+V01-V89                     ,Land transport accidents         ,XX,V01-Y98
+V01-V09                     ,Pedestrian injured in transport accident                          ,XX,V01-Y98
+V10-V19                     ,Pedal cyclist injured in transport accident                       ,XX,V01-Y98
+V20-V29                     ,Motorcycle rider injured in transport accident                    ,XX,V01-Y98
+V40-V49                     ,Car occupant injured in transport accident                         ,XX,V01-Y98
+V50-V59                     ,Occupant of pick-up truck or van injured in transport accident                                     ,XX,V01-Y98
+V60-V69                     ,Occupant of heavy transport vehicle injured in transport accident                                  ,XX,V01-Y98
+"W65-W99,X10-X39,X50-X59     ",Other accidents                  ,XX,V01-Y98
+X40-X49                     ,Accidental poisoning by and exposure to noxious substances       ,XX,V01-Y98
+X44                         ,"Accidental poisoning by and exposure to other and unspecified drugs, medicaments and biological substances                         ",XX,V01-Y98
+X85-Y09                     ,Assault                          ,XX,V01-Y98
+"X60-X84,Y10-Y34             ",Intentional self-harm; and event of undetermined intent                                             ,XX,V01-Y98
