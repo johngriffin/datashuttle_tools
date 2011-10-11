@@ -629,7 +629,6 @@ class ImportAdapterES implements ImportAdapter {
 		if (!is_null($object)) {
 			curl_setopt($this->ch, CURLOPT_POST, 1);
 			curl_setopt($this->ch, CURLOPT_POSTFIELDS, $data);
-			curl_setopt($this->ch, CURLOPT_POSTFIELDSIZE, strlen($data));
 		}
 
         $response_text = curl_exec($this->ch);
