@@ -154,9 +154,9 @@ class Import {
 				'id'			=> $row['id'],
 				'disease_id'	=> $disease_id,
 				'area_id'		=> $area_id,
-				'year'			=> $row['year'],
+				'year'			=> (int)$row['year'],
 				'gender'		=> $row['gender'],
-				'value'			=> $row['value'],
+				'value'			=> (int)$row['value'],
 			);
 
 			// Add to index
@@ -299,14 +299,9 @@ class Import {
 
 			$chapter_id = $this->chapters[$chapter];
 			$icd = trim($row[0]);
-			$name = trim($row[1]);
 
 			// Remove chapter prefix from disease name (if it exists)
-			$chapter_num = trim($row[2]);
-
-			if (strpos($name, $chapter_num) === 0) {
-				$name = trim(substr($name, strlen($chapter_num)));
-			}
+			$name = preg_replace(sprintf('#^(%s)\s+#', trim($row[2])), '', trim($row[1]), 1);
 
 			// Insert disease
 			$insert->execute();
@@ -593,10 +588,19 @@ class ImportAdapterSolr implements ImportAdapter {
 class ImportAdapterES implements ImportAdapter {
 
 	private $config;
+	private $ch;
 
 	public function __construct($config) {
 		$this->config = $config;
+
+        $this->ch = curl_init();
+		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($this->ch, CURLOPT_BINARYTRANSFER, 1);
 	}
+
+    public function __destruct() {
+        curl_close($this->ch);
+    }
 
 	public function addDoc($doc, $count) {
 		return $this->request('POST', $this->config['type'] . '/', $doc);
@@ -619,23 +623,22 @@ class ImportAdapterES implements ImportAdapter {
 			$action
 		);
 
-		$ch = curl_init();
-
-		curl_setopt($ch, CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-		curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
-		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+		curl_setopt($this->ch, CURLOPT_URL, $url);
+		curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $method);
 
 		if (!is_null($object)) {
-			curl_setopt($ch, CURLOPT_POST, 1);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-			curl_setopt($ch, CURLOPT_POSTFIELDSIZE, strlen($data));
+			curl_setopt($this->ch, CURLOPT_POST, 1);
+			curl_setopt($this->ch, CURLOPT_POSTFIELDS, $data);
+			curl_setopt($this->ch, CURLOPT_POSTFIELDSIZE, strlen($data));
 		}
 
-		$response = json_decode(curl_exec($ch));
+        $response_text = curl_exec($this->ch);
+		$response = json_decode($response_text);
 
 		if (is_null($response)) {
-			return false;
+            print curl_error($this->ch);
+            print_r(curl_getinfo($this->ch));
+            die("Error: Invalid response from ElasticSearch\n");
 		}
 
 		return (bool)$response->ok;
