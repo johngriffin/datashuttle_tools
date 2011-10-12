@@ -137,14 +137,14 @@ class Import {
 			list($icd, $area, $year, $gender) = $this->parseId($row['id']);
 
 			// Lookup LAD
-			$area_id = $this->lads[$area];
-			if (!isset($area_id)) {
+			$area_row = $this->lads[$area];
+			if (!isset($area_row)) {
 				die("ERROR: Couldn't find LAD: $area\n");
 			}
 
 			// Lookup disease
-			$disease_id = $this->diseases[$row['icdcode']];
-			if (!isset($disease_id)) {
+			$disease_row = $this->diseases[$row['icdcode']];
+			if (!isset($disease_row)) {
 				print_r($this->diseases);
 				die("ERROR: Couldn't find disease: $row[icdcode]\n");
 			}
@@ -152,10 +152,23 @@ class Import {
 			// Create document
 			$doc = array(
 				'id'			=> $row['id'],
-				'disease_id'	=> $disease_id,
-				'area_id'		=> $area_id,
-				'year'			=> (int)$row['year'],
-				'gender'		=> $row['gender'],
+                'disease'	    => array(
+                    'id'        => $disease_row['disease_icd'],
+                    'label'     => $disease_row['disease_name'],
+                ),
+                'area'		    => array(
+                    'id'        => $area_row['area_code'],
+                    'label'     => $area_row['area_name'],
+                    'boundary'  => json_decode($area_row['area_boundry']),
+                ),
+                'year'			=> array(
+                    'id'        => (int)$row['year'],
+                    'label'     => (int)$row['year'],
+                ),
+                'gender'		=> array(
+                    'id'        => $row['gender'],
+                    'label'     => ($row['gender'] == 'M') ? 'Male' : 'Female',
+                ),
 				'value'			=> (int)$row['value'],
 			);
 
@@ -306,7 +319,11 @@ class Import {
 			// Insert disease
 			$insert->execute();
 
-			$this->diseases[$icd] = $this->db->insert_id;
+            $this->diseases[$icd] = array(
+                'disease_id'    => $this->db->insert_id,
+                'disease_icd'   => $icd,
+                'disease_name'  => $name,
+            );
 
 		}
 
@@ -335,11 +352,11 @@ class Import {
 		}
 
 		// Skip adding LADs if the table isn't empty
-		$result = $this->db->query("SELECT area_id, area_code FROM `$config[areas_table]`");
+		$result = $this->db->query("SELECT * FROM `$config[areas_table]`");
 		if ($result && $result->num_rows > 0) {
 
 			while($row = $result->fetch_assoc()) {
-				$this->lads[$row['area_code']] = $row['area_id'];
+                $this->lads[$row['area_code']] = $row;
 			}
 
 			printf(" done (%d total)\n\n", count($this->lads));
@@ -423,7 +440,12 @@ class Import {
 						die("Couldn't insert LAD: $code\n");
 					}
 
-					$this->lads[$code] = $this->db->insert_id;
+                    $this->lads[$code] = array(
+                        'area_id'       => $this->db->insert_id,
+                        'area_code'     => $code,
+                        'area_name'     => $name,
+                        'area_boundry'  => $boundry,
+                    );
 
 				}
 			}
@@ -640,7 +662,7 @@ class ImportAdapterES implements ImportAdapter {
             die("Error: Invalid response from ElasticSearch\n");
 		}
 
-		return (bool)$response->ok;
+        return true;
 
 	}
 
