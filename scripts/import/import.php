@@ -26,20 +26,9 @@ class Import {
 
 		// ElasticSearch server
 		'es' => array(
-			'host'		=> 'localhost',
-			'port'		=> 9200,
-			'index'		=> 'mortality',
-			'type'		=> 'observation',
-		),
-
-		// Output database
-		'db_out' => array(
-			'table'				=> 'mortality',
-			'areas_table'		=> 'mortality_areas',
-			'chapters_table'	=> 'mortality_chapters',
-			'chapters_file'		=> 'csv/chapters.csv',
-			'diseases_table'	=> 'mortality_diseases',
-			'diseases_file'		=> 'csv/chapters_hierarchy.csv',
+			'host'          => 'localhost',
+			'port'          => 9200,
+			'index'         => 'mortality',
 		),
 
 		// Kasabi
@@ -47,6 +36,11 @@ class Import {
 			'url'	=> 'http://api.kasabi.com/dataset/ordnance-survey-linked-data/apis/sparql',
 			'key'	=> '503fd03ef47dfd89b8470301692732332828dba3',
 		),
+
+        // General
+        'areas_table'		=> 'mortality_areas',
+        'chapters_file'		=> 'csv/chapters.csv',
+        'diseases_file'		=> 'csv/chapters_hierarchy.csv',
 	);
 
 	// Lookup tables
@@ -87,8 +81,7 @@ class Import {
 				break;
 
 			case 'db':
-				$config = array_merge($this->config['db_out'], array('db' => $this->db));
-				$this->adapter = new ImportAdapterMySQL($config);
+				$this->adapter = new ImportAdapterMySQL(array('db' => $this->db));
 				break;
 
 			default:
@@ -109,17 +102,67 @@ class Import {
 
 	public function run() {
 
-		// Fetch ICD chapters
-		$this->fetchChapters($this->config['db_out']);
-
-		// Fetch ICD diseases
-		$this->fetchDiseases($this->config['db_out']);
-
-		// Fetch LADs
-		$this->fetchLADs($this->config['db_out']);
-
 		// Delete existing index
 		$this->adapter->deleteIndex();
+
+        // Add genders
+        $genders = array(
+            array(
+                'id' => 'M',
+                'label' => 'Male',
+            ),
+            array(
+                'id' => 'F',
+                'label' => 'Female',
+            ),
+        );
+        $this->addList('gender', $genders);
+
+        // Add years
+        $years = array(
+            array(
+                'id' => 2002,
+                'label' => 2002,
+            ),
+            array(
+                'id' => 2003,
+                'label' => 2003,
+            ),
+            array(
+                'id' => 2004,
+                'label' => 2004,
+            ),
+            array(
+                'id' => 2005,
+                'label' => 2005,
+            ),
+            array(
+                'id' => 2006,
+                'label' => 2006,
+            ),
+            array(
+                'id' => 2007,
+                'label' => 2007,
+            ),
+            array(
+                'id' => 2008,
+                'label' => 2008,
+            ),
+            array(
+                'id' => 2009,
+                'label' => 2009,
+            ),
+        );
+        $this->addList('year', $years);
+
+		// Add ICD chapters
+		$this->addChapters();
+
+		// Add ICD diseases
+		$this->addDiseases();
+
+		// Add LADs
+		$this->addLADs();
 
 		// Fetch all rows from DB
 		$result = $this->db->query('SELECT * FROM ' . $this->config['db']['table']);
@@ -136,44 +179,18 @@ class Import {
 			// Extract LAD from row ID
 			list($icd, $area, $year, $gender) = $this->parseId($row['id']);
 
-			// Lookup LAD
-			$area_row = $this->lads[$area];
-			if (!isset($area_row)) {
-				die("ERROR: Couldn't find LAD: $area\n");
-			}
-
-			// Lookup disease
-			$disease_row = $this->diseases[$row['icdcode']];
-			if (!isset($disease_row)) {
-				print_r($this->diseases);
-				die("ERROR: Couldn't find disease: $row[icdcode]\n");
-			}
-
 			// Create document
-			$doc = array(
-				'id'			=> $row['id'],
-                'disease'	    => array(
-                    'id'        => $disease_row['disease_icd'],
-                    'label'     => $disease_row['disease_name'],
-                ),
-                'area'		    => array(
-                    'id'        => $area_row['area_code'],
-                    'label'     => $area_row['area_name'],
-                    'boundary'  => json_decode($area_row['area_boundry']),
-                ),
-                'year'			=> array(
-                    'id'        => (int)$row['year'],
-                    'label'     => (int)$row['year'],
-                ),
-                'gender'		=> array(
-                    'id'        => $row['gender'],
-                    'label'     => ($row['gender'] == 'M') ? 'Male' : 'Female',
-                ),
-				'value'			=> (int)$row['value'],
-			);
+            $doc = array(
+                'id'        => $row['id'],
+                'area'      => $area,
+                'disease'   => $row['icdcode'],
+                'gender'    => $row['gender'],
+                'value'     => (int)$row['value'],
+                'year'      => (int)$row['year'],
+            );
 
 			// Add to index
-			$this->adapter->addDoc($doc, $this->count);
+			$this->adapter->addDoc('observation', $doc, $this->count);
 
 			printf("ADDED: %06d (%dMB)\n", ++$this->count, memory_get_usage()/1024/1024);
 
@@ -188,7 +205,17 @@ class Import {
 
 	}
 
-	private function fetchChapters($config) {
+    private function addList($type, $docs) {
+
+        $count = 0;
+
+        foreach($docs as $doc) {
+            $this->adapter->addDoc($type, $doc, ++$count);
+        }
+
+    }
+
+	private function addChapters() {
 
 		print "Fetching chapters...";
 
@@ -196,38 +223,10 @@ class Import {
 		ini_set('auto_detect_line_endings', true);
 
 		// Open chapters CSV
-		$csv = fopen($config['chapters_file'], 'r');
+		$csv = fopen($this->config['chapters_file'], 'r');
 		if ($csv === false) {
-			die("Unable to open chapters CSV file: $config[chapters_file]\n");
+			die("Unable to open chapters CSV file: $this->config[chapters_file]\n");
 		}
-
-		// Create table
-		$result = $this->db->query("
-			CREATE TABLE IF NOT EXISTS `$config[chapters_table]` (
-				`chapter_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-				`chapter_code` varchar(255) NOT NULL,
-				`chapter_name` varchar(255) NOT NULL,
-				PRIMARY KEY (`chapter_id`)
-			) ENGINE=MyISAM  DEFAULT CHARSET=utf8"
-		);
-
-		if (!$result) {
-			die("Unable to create table: $config[chapters_table]\n");
-		}
-
-		$result = $this->db->query("TRUNCATE `$config[chapters_table]`");
-
-		if (!$result) {
-			die("Unable to truncate table: $config[chapters_table]\n");
-		}
-
-		// Prepare insert statement
-		$insert = $this->db->prepare("
-			INSERT INTO `$config[chapters_table]` (`chapter_id`, `chapter_code`, `chapter_name`)
-			VALUES (NULL, ?, ?)"
-		);
-
-		$insert->bind_param('ss', $code, $name);
 
 		$count = 0;
 
@@ -239,21 +238,20 @@ class Import {
 			}
 
 			// Insert chapter
-			$code = $row[0];
-			$name = $row[2];
-			$insert->execute();
-
-			$this->chapters[$row[1]] = $this->db->insert_id;
+            $doc = array(
+                'code'  => $row[0],
+                'name'  => $row[2],
+                'range' => $row[1],
+            );
+            $this->adapter->addDoc('chapter', $doc, $count);
 
 		}
-
-		$insert->close();
 
 		printf("done (%d chapters)\n", $count);
 
 	}
 
-	private function fetchDiseases($config) {
+	private function addDiseases() {
 
 		print "Fetching diseases...";
 
@@ -261,39 +259,10 @@ class Import {
 		ini_set('auto_detect_line_endings', true);
 
 		// Open chapters CSV
-		$csv = fopen($config['diseases_file'], 'r');
+		$csv = fopen($this->config['diseases_file'], 'r');
 		if ($csv === false) {
-			die("Unable to open diseases CSV file: $config[diseases_file]\n");
+			die("Unable to open diseases CSV file: $this->config[diseases_file]\n");
 		}
-
-		// Create table
-		$result = $this->db->query("
-			CREATE TABLE IF NOT EXISTS `$config[diseases_table]` (
-				`disease_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-				`chapter_id` int(10) unsigned NOT NULL,
-				`disease_icd` varchar(255) NOT NULL,
-				`disease_name` varchar(255) NOT NULL,
-				PRIMARY KEY (`disease_id`)
-			) ENGINE=MyISAM  DEFAULT CHARSET=utf8"
-		);
-
-		if (!$result) {
-			die("Unable to create table: $config[diseases_table]\n");
-		}
-
-		$result = $this->db->query("TRUNCATE `$config[diseases_table]`");
-
-		if (!$result) {
-			die("Unable to truncate table: $config[diseases_table]\n");
-		}
-
-		// Prepare insert statement
-		$insert = $this->db->prepare("
-			INSERT INTO `$config[diseases_table]` (`disease_id`, `chapter_id`, `disease_icd`, `disease_name`)
-			VALUES (NULL, ?, ?, ?)"
-		);
-
-		$insert->bind_param('iss', $chapter_id, $icd, $name);
 
 		$count = 0;
 
@@ -304,59 +273,37 @@ class Import {
 				continue;
 			}
 
-			$chapter = trim($row[3]);
-
-			if (!isset($this->chapters[$chapter])) {
-				die("Unknown chapter: $chapter\n");
-			}
-
-			$chapter_id = $this->chapters[$chapter];
-			$icd = trim($row[0]);
-
-			// Remove chapter prefix from disease name (if it exists)
-			$name = preg_replace(sprintf('#^(%s)\s+#', trim($row[2])), '', trim($row[1]), 1);
-
-			// Insert disease
-			$insert->execute();
-
-            $this->diseases[$icd] = array(
-                'disease_id'    => $this->db->insert_id,
-                'disease_icd'   => $icd,
-                'disease_name'  => $name,
+            $doc = array(
+                'id'            => trim($row[0]),
+                'label'         => preg_replace(sprintf('#^(%s)\s+#', trim($row[2])), '', trim($row[1]), 1),
+                'chapter_range' => trim($row[3]),
             );
+            $this->adapter->addDoc('disease', $doc, $count);
 
 		}
-
-		$insert->close();
 
 		printf("done (%d diseases)\n", $count);
 
 	}
-	private function fetchLADs($config) {
+	private function addLADs() {
 
 		print "Fetching LADs";
 
-		// Create table
-		$result = $this->db->query("
-			CREATE TABLE IF NOT EXISTS `$config[areas_table]` (
-				`area_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-				`area_code` varchar(255) NOT NULL,
-				`area_name` varchar(255) NOT NULL,
-				`area_boundry` longtext NOT NULL,
-				PRIMARY KEY (`area_id`)
-			) ENGINE=MyISAM  DEFAULT CHARSET=utf8"
-		);
-
-		if (!$result) {
-			die("Unable to create table: $config[areas_table]\n");
-		}
+        $count = 0;
 
 		// Skip adding LADs if the table isn't empty
-		$result = $this->db->query("SELECT * FROM `$config[areas_table]`");
+		$result = $this->db->query("SELECT * FROM `{$this->config[areas_table]}`");
 		if ($result && $result->num_rows > 0) {
 
 			while($row = $result->fetch_assoc()) {
-                $this->lads[$row['area_code']] = $row;
+
+                $doc = array(
+                    'id'        => $row['area_code'],
+                    'label'     => $row['area_name'],
+                    'boundary'  => json_decode($row['area_boundry']),
+                );
+                $this->adapter->addDoc('area', $doc, ++$count);
+
 			}
 
 			printf(" done (%d total)\n\n", count($this->lads));
@@ -364,21 +311,8 @@ class Import {
 
 		}
 
-		$result = $this->db->query("TRUNCATE `$config[areas_table]`");
-
-		if (!$result) {
-			die("Unable to truncate table: $config[areas_table]\n");
-		}
-
-		// Prepare insert statement
-		$insert = $this->db->prepare("
-			INSERT INTO `$config[areas_table]` (`area_id`, `area_code`, `area_name`, `area_boundry`)
-			VALUES (NULL, ?, ?, ?)"
-		);
-
-		$insert->bind_param('sss', $code, $name, $boundry);
-
 		// Fetch LADs
+        $lads = array();
 		$limit = 20;
 		$offset = 0;
 
@@ -426,26 +360,20 @@ class Import {
 
 					$code = 'H' . $lad['census']['value'];
 
-					if (isset($this->lads[$code])) {
+					if (isset($lads[$code])) {
 						// Skip duplicates
 						continue;
 					}
 
-					$name = $lad['label']['value'];
-					$boundry = $this->convertGMLtoGeoJSON($lad['GML']['value'], $code);
-
 					// Add area
-					$result = $insert->execute();
-					if (!$result) {
-						die("Couldn't insert LAD: $code\n");
-					}
-
-                    $this->lads[$code] = array(
-                        'area_id'       => $this->db->insert_id,
-                        'area_code'     => $code,
-                        'area_name'     => $name,
-                        'area_boundry'  => $boundry,
+                    $doc = array(
+                        'code'      => $code,
+                        'name'      => $lad['label']['value'],
+                        'boundry'   => $boundry = $this->convertGMLtoGeoJSON($lad['GML']['value'], $code),
                     );
+                    $this->adapter->addDoc('area', $doc, ++$count);
+
+                    $lads[$code] = true;
 
 				}
 			}
@@ -456,9 +384,7 @@ class Import {
 
 		} while(count($json['results']['bindings']));
 
-		$insert->close();
-
-		printf(" done (%d total)\n\n", count($this->lads));
+		printf(" done (%d total)\n\n", $count);
 
 	}
 
@@ -532,7 +458,7 @@ class Import {
 interface ImportAdapter {
 
 	public function __construct($config);
-	public function addDoc($doc, $count);
+	public function addDoc($type, $doc, $count);
 	public function deleteIndex();
 
 }
@@ -560,7 +486,9 @@ class ImportAdapterSolr implements ImportAdapter {
 		$this->cleanUp();
 	}
 
-	public function addDoc($doc, $count) {
+	public function addDoc($type, $doc, $count) {
+
+        die ("ImportAdapterSolr: UNIMPLEMENTED\n");
 
 		// Create document
 		$solrDoc = new Apache_Solr_Document();
@@ -624,12 +552,96 @@ class ImportAdapterES implements ImportAdapter {
         curl_close($this->ch);
     }
 
-	public function addDoc($doc, $count) {
-		return $this->request('POST', $this->config['type'] . '/', $doc);
+	public function addDoc($type, $doc, $count) {
+		return $this->request('POST', $type . '/', $doc);
 	}
 
 	public function deleteIndex() {
-		return $this->request('DELETE');
+
+        if(!$this->request('DELETE')) {
+            die("Couldn't delete existing index");
+        }
+
+        $index = array(
+            'settings' => array(
+                'number_of_shards' => 1,
+            ),
+            'mappings' => array(
+                'observation' => array(
+                    'properties' => array(
+                        'id' => array(
+                            'type' => 'string',
+                        ),
+                        'area' => array(
+                            'type' => 'string',
+                        ),
+                        'disease' => array(
+                            'type' => 'string',
+                        ),
+                        'gender' => array(
+                            'type' => 'string',
+                        ),
+                        'value' => array(
+                            'type' => 'integer',
+                        ),
+                        'year' => array(
+                            'type' => 'integer',
+                        ),
+                    ),
+               ),
+               'area' => array(
+                    'properties' => array(
+                        'id' => array(
+                            'type' => 'string',
+                        ),
+                        'label' => array(
+                            'type' => 'string',
+                            'index' => 'not_analyzed',
+                        ),
+                        'boundary' => array(
+                            'type' => 'object',
+                        ),
+                    ),
+                ),
+                'disease' => array(
+                    'properties' => array(
+                        'id' => array(
+                            'type' => 'string',
+                        ),
+                        'label' => array(
+                            'type' => 'string',
+                            'index' => 'not_analyzed',
+                        ),
+                    ),
+                ),
+                'gender' => array(
+                    'properties' => array(
+                        'id' => array(
+                            'type' => 'string',
+                        ),
+                        'label' => array(
+                            'type' => 'string',
+                            'index' => 'not_analyzed',
+                        ),
+                    ),
+                ),
+                'year' => array(
+                    'properties' => array(
+                        'id' => array(
+                            'type' => 'integer',
+                        ),
+                        'label' => array(
+                            'type' => 'integer',
+                        ),
+                    ),
+                ),
+            ),
+        );
+
+        if (!$this->request('POST', '', $index)) {
+            die("Couldn't create new index");
+        }
+
 	}
 
 	private function request($method, $action = '', $object = null) {
@@ -698,7 +710,9 @@ class ImportAdapterMySQL implements ImportAdapter {
 
 	}
 
-	public function addDoc($doc, $count) {
+	public function addDoc($type, $doc, $count) {
+
+        die ("ImportAdapterMySQL: UNIMPLEMENTED\n");
 
 		$insert = $this->db->prepare("
 			INSERT INTO `" . $this->config['table'] . "` (`id`, `disease_id`, `area_id`, `year`, `gender`, `value`)
