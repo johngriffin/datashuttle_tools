@@ -239,8 +239,8 @@ class Import {
 
 			// Insert chapter
             $doc = array(
-                'code'  => $row[0],
-                'name'  => $row[2],
+                'id'  => $row[0],
+                'label'  => $row[2],
                 'range' => $row[1],
             );
             $this->adapter->addDoc('chapter', $doc, $count);
@@ -571,15 +571,19 @@ class ImportAdapterES implements ImportAdapter {
                     'properties' => array(
                         'id' => array(
                             'type' => 'string',
+                            'index' => 'not_analyzed',
                         ),
                         'area' => array(
                             'type' => 'string',
+                            'index' => 'not_analyzed',
                         ),
                         'disease' => array(
                             'type' => 'string',
+                            'index' => 'not_analyzed',
                         ),
                         'gender' => array(
                             'type' => 'string',
+                            'index' => 'not_analyzed',
                         ),
                         'value' => array(
                             'type' => 'integer',
@@ -593,6 +597,7 @@ class ImportAdapterES implements ImportAdapter {
                     'properties' => array(
                         'id' => array(
                             'type' => 'string',
+                            'index' => 'not_analyzed',
                         ),
                         'label' => array(
                             'type' => 'string',
@@ -607,6 +612,7 @@ class ImportAdapterES implements ImportAdapter {
                     'properties' => array(
                         'id' => array(
                             'type' => 'string',
+                            'index' => 'not_analyzed',
                         ),
                         'label' => array(
                             'type' => 'string',
@@ -618,6 +624,7 @@ class ImportAdapterES implements ImportAdapter {
                     'properties' => array(
                         'id' => array(
                             'type' => 'string',
+                            'index' => 'not_analyzed',
                         ),
                         'label' => array(
                             'type' => 'string',
