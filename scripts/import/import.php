@@ -179,11 +179,14 @@ class Import {
 			// Extract LAD from row ID
 			list($icd, $area, $year, $gender) = $this->parseId($row['id']);
 
+            $chapter_range = $this->diseases[$row['icdcode']]['chapter'];
+
 			// Create document
             $doc = array(
                 'id'        => $row['id'],
                 'area'      => $area,
                 'disease'   => $row['icdcode'],
+                'chapter'   => $this->chapters[$chapter_range]['id'],
                 'gender'    => $row['gender'],
                 'value'     => (int)$row['value'],
                 'year'      => (int)$row['year'],
@@ -239,11 +242,13 @@ class Import {
 
 			// Insert chapter
             $doc = array(
-                'id'  => $row[0],
-                'label'  => $row[2],
-                'range' => $row[1],
+                'id'    => trim($row[0]),
+                'label' => trim($row[2]),
+                'range' => trim($row[1]),
             );
             $this->adapter->addDoc('chapter', $doc, $count);
+
+            $this->chapters[$doc['range']] = $doc;
 
 		}
 
@@ -274,11 +279,13 @@ class Import {
 			}
 
             $doc = array(
-                'id'            => trim($row[0]),
-                'label'         => preg_replace(sprintf('#^(%s)\s+#', trim($row[2])), '', trim($row[1]), 1),
-                'chapter_range' => trim($row[3]),
+                'id'        => trim($row[0]),
+                'label'     => preg_replace(sprintf('#^(%s)\s+#', trim($row[2])), '', trim($row[1]), 1),
+                'chapter'   => trim($row[3]),
             );
             $this->adapter->addDoc('disease', $doc, $count);
+
+            $this->diseases[$doc['id']] = $doc;
 
 		}
 
@@ -287,12 +294,12 @@ class Import {
 	}
 	private function addLADs() {
 
-		print "Fetching LADs";
+		print "Fetching LADs...\n";
 
         $count = 0;
 
 		// Skip adding LADs if the table isn't empty
-		$result = $this->db->query("SELECT * FROM `{$this->config[areas_table]}`");
+		$result = $this->db->query('SELECT * FROM `' . $this->config['areas_table'] . '`');
 		if ($result && $result->num_rows > 0) {
 
 			while($row = $result->fetch_assoc()) {
@@ -300,21 +307,30 @@ class Import {
                 $doc = array(
                     'id'        => $row['area_code'],
                     'label'     => $row['area_name'],
-                    'boundary'  => json_decode($row['area_boundry']),
+                    'boundary'  => json_decode($row['area_boundary']),
                 );
                 $this->adapter->addDoc('area', $doc, ++$count);
 
 			}
 
-			printf(" done (%d total)\n\n", count($this->lads));
+			printf("Done (%d total)\n\n", $count);
 			return;
 
 		}
 
 		// Fetch LADs
         $lads = array();
-		$limit = 20;
+		$limit = 10;
 		$offset = 0;
+
+		$insert = $this->db->prepare("
+			INSERT INTO `" . $this->config['areas_table'] . "` (`id`, `area_code`, `area_name`, `area_boundary`, `area_boundary_gml`)
+			VALUES (NULL, ?, ?, ?, ?)"
+		);
+
+		if (!$insert) {
+			die ("Unable to prepare area insert statement");
+		}
 
 		do {
 
@@ -356,6 +372,9 @@ class Import {
 			}
 
 			if (count($json['results']['bindings'])) {
+
+                printf("Fetched %d LADs. Processing...\n", count($json['results']['bindings']));
+
 				foreach($json['results']['bindings'] as $lad) {
 
 					$code = 'H' . $lad['census']['value'];
@@ -365,26 +384,36 @@ class Import {
 						continue;
 					}
 
-					// Add area
+                    $name = $lad['label']['value'];
+                    $gml = $lad['GML']['value'];
+                    $boundary = $this->convertGMLtoGeoJSON($gml, $code);
+
+                    // Add area to DB
+                    $insert->bind_param('ssss', $code, $name, $boundary, $gml);
+                    $insert->execute();
+
+					// Add area to adapter
                     $doc = array(
-                        'code'      => $code,
-                        'name'      => $lad['label']['value'],
-                        'boundry'   => $boundry = $this->convertGMLtoGeoJSON($lad['GML']['value'], $code),
+                        'id'         => $code,
+                        'label'      => $name,
+                        'boundary'   => $boundary,
                     );
                     $this->adapter->addDoc('area', $doc, ++$count);
 
                     $lads[$code] = true;
 
+                    printf("%s\n", $code);
+
 				}
 			}
-
-			print ".";
 
 			$offset += $limit;
 
 		} while(count($json['results']['bindings']));
 
-		printf(" done (%d total)\n\n", $count);
+        $insert->close();
+
+		printf("\nDone (%d total).\n\n", $count);
 
 	}
 
@@ -577,6 +606,10 @@ class ImportAdapterES implements ImportAdapter {
                             'type' => 'string',
                             'index' => 'not_analyzed',
                         ),
+                        'chapter' => array(
+                            'type' => 'string',
+                            'index' => 'not_analyzed',
+                        ),
                         'disease' => array(
                             'type' => 'string',
                             'index' => 'not_analyzed',
@@ -609,6 +642,18 @@ class ImportAdapterES implements ImportAdapter {
                     ),
                 ),
                 'disease' => array(
+                    'properties' => array(
+                        'id' => array(
+                            'type' => 'string',
+                            'index' => 'not_analyzed',
+                        ),
+                        'label' => array(
+                            'type' => 'string',
+                            'index' => 'not_analyzed',
+                        ),
+                    ),
+                ),
+                'chapter' => array(
                     'properties' => array(
                         'id' => array(
                             'type' => 'string',
