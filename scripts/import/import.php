@@ -242,9 +242,10 @@ class Import {
 
 			// Insert chapter
             $doc = array(
-                'id'    => trim($row[0]),
-                'label' => trim($row[2]),
-                'range' => trim($row[1]),
+                'id'            => trim($row[0]),
+                'label'         => trim($row[2]),
+                'short_label'   => trim($row[3]),
+                'range'         => trim($row[1]),
             );
             $this->adapter->addDoc('chapter', $doc, $count);
 
