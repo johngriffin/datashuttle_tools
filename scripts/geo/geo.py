@@ -1,6 +1,40 @@
 import math
 
+def ramerdouglas(line, dist):
+    """ Does Ramer-Douglas-Peucker simplification of a line with `dist` """
+
+    if len(line) < 3:
+        return line
+
+    begin, end = line[0], line[-1]
+
+    distSq = []
+    for curr in line[1:-1]:
+        b = _vec2d_dist(begin, end)
+        if b == 0:
+            b = 1
+        distSq.append(_vec2d_dist(begin, curr) - _vec2d_mult(_vec2d_sub(end, begin), _vec2d_sub(curr, begin)) ** 2 / b)
+
+    maxdist = max(distSq)
+    if maxdist < dist ** 2:
+        return [begin, end]
+
+    pos = distSq.index(maxdist)
+    return (ramerdouglas(line[:pos + 2], dist) +
+        ramerdouglas(line[pos + 1:], dist)[1:])
+
+def _vec2d_dist(p1, p2):
+    return (p1[0] - p2[0])**2 + (p1[1] - p2[1])**2
+
+def _vec2d_sub(p1, p2):
+    return (p1[0]-p2[0], p1[1]-p2[1])
+
+def _vec2d_mult(p1, p2):
+    return p1[0]*p2[0] + p1[1]*p2[1]
+
 def os2latlng(E, N):
+    """ Convert Ordnance Survey easting and northings to latitiude and longitude """
+
     OSGB_F0  = 0.9996012717
     N0       = -100000.0
     E0       = 400000.0
@@ -83,6 +117,8 @@ def os2latlng(E, N):
     return OSGB36toWGS84(math.degrees(phi), math.degrees(lmb))
 
 def OSGB36toWGS84(lat, lng):
+    """ Convert latitude and longitude from Ordnance Survey datum (OSGB36) to standard datum (WGS84) """
+
     a        = 6377563.396
     b        = 6356256.909
     eSquared = ab2ecc(a, b)
